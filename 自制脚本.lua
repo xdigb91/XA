@@ -1235,7 +1235,7 @@ Visual = Window:AddTab("视觉", "eye"),
 Aim = Window:AddTab("自瞄", "crosshair"),
 Function = Window:AddTab("趣味功能", "list"),
 }
-local InfoBox = Tabs.Announcement:AddLeftGroupbox("信息")
+local InfoBox = Tabs.Announcement:AddLeftGroupbox("信息", "info")
 local lp = game.Players.LocalPlayer
 do
 local avatarFrame = Instance.new("Frame")
@@ -1383,7 +1383,7 @@ end
 end)
 end)
 
-local AnnouncementBox = Tabs.Announcement:AddRightGroupbox("公告")
+local AnnouncementBox = Tabs.Announcement:AddRightGroupbox("公告", "megaphone")
 AnnouncementBox:AddLabel("祝你天天开心，脚本禁止倒卖 ")
 AnnouncementBox:AddLabel("作者B站UID: 3706985503525348")
 AnnouncementBox:AddLabel("脚本会持续更新，永久免费")
@@ -1401,8 +1401,8 @@ local me = plrs.LocalPlayer
 local run = game:GetService("RunService")
 local camera = workspace.CurrentCamera
 
-local AimBox = Tabs.Aim:AddLeftGroupbox("自瞄")
-local AimSideBox = Tabs.Aim:AddRightGroupbox("单独自瞄")
+local AimBox = Tabs.Aim:AddLeftGroupbox("自瞄", "target")
+local AimSideBox = Tabs.Aim:AddRightGroupbox("单独自瞄", "crosshair")
 AimSideBox:AddLabel({ Text = "如果你感到很卡的话，加载下面的单独自瞄", DoesWrap = true })
 AimSideBox:AddButton({ Text = "点击加载单独透视自瞄", Func = function()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/78789191/main/XJW自瞄透视.lua"))()
@@ -1868,7 +1868,7 @@ end)
 
 end
 
-local FeatureBox = Tabs.Function:AddLeftGroupbox("其他")
+local FeatureBox = Tabs.Function:AddLeftGroupbox("其他", "list")
 FeatureBox:AddButton("静默甩飞", function()
 safeLoad("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/78789191/refs/heads/main/%E9%9D%99%E9%BB%98%E7%94%A9%E9%A3%9E(%E5%BC%80%E6%BA%90).lua")
 end)
@@ -1901,7 +1901,7 @@ end)
 FeatureBox:AddButton("更帅的超人式飞行", function()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%9B%B4%E5%B8%85%E7%9A%84%E8%B6%85%E4%BA%BA%E5%BC%8F%E9%A3%9E%E8%A1%8C.lua"))()
 end)
-local FeatureBoxR = Tabs.Function:AddRightGroupbox("其他")
+local FeatureBoxR = Tabs.Function:AddRightGroupbox("其他", "sparkles")
 FeatureBoxR:AddButton("摄像机穿墙", function()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%91%84%E5%83%8F%E6%9C%BA%E7%A9%BF%E5%A2%99.lua"))()
 end)
@@ -2141,7 +2141,7 @@ table.sort(names)
 return names
 end
 
-local TeleportBox = Tabs.TP:AddLeftGroupbox("传送功能")
+local TeleportBox = Tabs.TP:AddLeftGroupbox("传送功能", "send")
 local tpTargetName = ""
 local tpDropdown = TeleportBox:AddDropdown("TP2_Target", {
 Text = "选择目标玩家",
@@ -2194,7 +2194,7 @@ table.insert(PState.threads, thread)
 end
 end)
 
-local HeadSitBox = Tabs.TP:AddLeftGroupbox("坐头功能")
+local HeadSitBox = Tabs.TP:AddLeftGroupbox("坐头功能", "users")
 local sitHeadTargetName = ""
 local sitHeadDropdown = HeadSitBox:AddDropdown("SitHead_Target", {
 Text = "选择目标玩家",
@@ -2292,7 +2292,7 @@ end)
 
 HeadSitBox:AddButton("停止坐头", stopHeadSit)
 
-local FlingBox2 = Tabs.TP:AddLeftGroupbox("甩飞功能")
+local FlingBox2 = Tabs.TP:AddLeftGroupbox("甩飞功能", "wind")
 local flingTargetName = ""
 local flingDropdown = FlingBox2:AddDropdown("Fling2_Target", {
 Text = "选择目标玩家",
@@ -2499,7 +2499,7 @@ flingLoops2.all = false
 pNotify("停止", "已停止所有甩飞")
 end)
 
-local MonitorBox2 = Tabs.TP:AddRightGroupbox("视角监视")
+local MonitorBox2 = Tabs.TP:AddRightGroupbox("视角监视", "eye")
 local monitorTargetName = ""
 local monitorDropdown = MonitorBox2:AddDropdown("Monitor2_Target", {
 Text = "选择目标玩家",
@@ -2561,7 +2561,7 @@ end)
 
 MonitorBox2:AddButton("停止监视", stopMonitor2)
 
-local FollowBox2 = Tabs.TP:AddRightGroupbox("恶搞跟随")
+local FollowBox2 = Tabs.TP:AddRightGroupbox("恶搞跟随", "ghost")
 local followTargetName = ""
 local followDropdown = FollowBox2:AddDropdown("Follow2_Target", {
 Text = "选择目标玩家",
@@ -3109,7 +3109,7 @@ task.delay(1, reapplyAllStates)
 task.delay(3, reapplyAllStates)
 end)
 
-local CharBox = Tabs.Main:AddLeftGroupbox("角色修改")
+local CharBox = Tabs.Main:AddLeftGroupbox("角色修改", "user")
 CharBox:AddToggle("Char_WalkSpeed", { Text = "修改移速", Default = false }):OnChanged(function(v)
 CharStates.WalkSpeed.Enabled = v
 applyWalkSpeed()
@@ -3184,7 +3184,7 @@ CharBox:AddSlider("Char_WallClimbVal", { Text = "爬墙速度", Default = 50, Mi
 CharStates.WallClimb.Value = v
 end)
 
-local MiscBox = Tabs.Main:AddLeftGroupbox("杂项")
+local MiscBox = Tabs.Main:AddLeftGroupbox("杂项", "grid")
 MiscBox:AddToggle("Char_AntiAfk", { Text = "反挂机", Default = false }):OnChanged(function(v)
 CharStates.AntiAfk.Enabled = v
 if v then startAntiAfk() else stopAntiAfk() end
@@ -3254,7 +3254,7 @@ FakeLag.TeleportDistance = v
 end)
 
 do
-local FlyBox = Tabs.Main:AddRightGroupbox("飞行")
+local FlyBox = Tabs.Main:AddRightGroupbox("飞行", "plane")
 FlyBox:AddButton("XJW飞行", function()
 safeLoad("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/78789191/refs/heads/main/%E8%87%AA%E5%88%B6%E8%84%9A%E6%9C%AC%E9%A3%9E%E8%A1%8C.lua")
 end)
@@ -3500,7 +3500,7 @@ game.Players.LocalPlayer.CharacterAdded:Connect(function(character)
 end)
 end
 
-local SpinBox = Tabs.Main:AddRightGroupbox("旋转")
+local SpinBox = Tabs.Main:AddRightGroupbox("旋转", "rotate-cw")
 local spinRunning = false
 local spinSpeed = 10
 
@@ -3564,7 +3564,7 @@ end
 end
 end)
 
-local FollowBox = Tabs.TP:AddRightGroupbox("跟随功能")
+local FollowBox = Tabs.TP:AddRightGroupbox("跟随功能", "footprints")
 local followTarget = nil
 local followForward = 5
 local followSide = 0
@@ -3695,7 +3695,7 @@ end)
 
 
 do
-local CamBox = Tabs.Visual:AddLeftGroupbox("视角功能")
+local CamBox = Tabs.Visual:AddLeftGroupbox("视角功能", "camera")
 local camFOVEnabled = false
 local camFOVValue = 70
 local camFaceLockOn = false
@@ -3751,7 +3751,7 @@ end
 
 pcall(function()
 
-local BSESPBox = Tabs.Visual:AddLeftGroupbox("ESP设置")
+local BSESPBox = Tabs.Visual:AddLeftGroupbox("ESP设置", "scan")
 
 getgenv().BSESPConfig = getgenv().BSESPConfig or {
 ESPEnabled = false,
@@ -4357,7 +4357,7 @@ BSESPBox:AddToggle("BS_TeamCheck", { Text = "队伍检查", Default = false }):O
 getgenv().BSESPConfig.TeamCheck = v
 end)
 
-local BeautifyGroup = Tabs.Visual:AddRightGroupbox("美化包")
+local BeautifyGroup = Tabs.Visual:AddRightGroupbox("美化包", "sparkles")
 
 local function deleteAccessories(char)
 char = char or getCharacter()
@@ -4573,7 +4573,7 @@ end
 end)
 end
 end)
-local BSESPRightBox = Tabs.Visual:AddRightGroupbox("其他设置")
+local BSESPRightBox = Tabs.Visual:AddRightGroupbox("其他设置", "settings")
 BSESPRightBox:AddToggle("BS_ShowSkeleton", { Text = "显示骨骼", Default = false }):OnChanged(function(v)
 getgenv().BSESPConfig.ShowSkeleton = v
 end)
@@ -4629,7 +4629,7 @@ local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Tor
 return char, root
 end
 
-local NightVisionBox = Tabs.Main:AddLeftGroupbox("夜视功能")
+local NightVisionBox = Tabs.Main:AddLeftGroupbox("夜视功能", "moon")
 
 local nightVisionEnabled  = false
 local nightVisionConn      = nil
@@ -4680,7 +4680,7 @@ restoreOriginalLighting()
 Notify("夜视", "夜视模式已关闭，已恢复原值", 3)
 end
 end)
-local AntiVoidBox = Tabs.Main:AddLeftGroupbox("防虚空")
+local AntiVoidBox = Tabs.Main:AddLeftGroupbox("防虚空", "shield")
 
 local antiVoidThreshold = -100
 AntiVoidBox:AddSlider("AntiVoid_Threshold", {
@@ -4792,7 +4792,7 @@ bsAntiVoid:disable()
 end
 end)
 
-local OptimizeBox = Tabs.Main:AddLeftGroupbox("防卡顿优化")
+local OptimizeBox = Tabs.Main:AddLeftGroupbox("防卡顿优化", "gauge")
 
 local optimizeEnabled   = false
 local optimizeOriginal   = {}
@@ -4872,7 +4872,7 @@ Notify("防卡顿优化", "已恢复原设置", 3)
 end
 end)
 
-local AntiKickBox = Tabs.Main:AddRightGroupbox("防踢功能")
+local AntiKickBox = Tabs.Main:AddRightGroupbox("防踢功能", "shield-check")
 
 local antiKickApplied = false
 
@@ -4924,7 +4924,7 @@ AntiKickBox:AddButton("启用防踢", function()
 setupAntiKick()
 end)
 
-local BypassBox = Tabs.Main:AddRightGroupbox("绕过功能")
+local BypassBox = Tabs.Main:AddRightGroupbox("绕过功能", "unlock")
 
 BypassBox:AddButton("绕过反作弊(Adonis)", function()
 local ok, err = pcall(function()
@@ -5038,7 +5038,7 @@ CoordDropdown:SetValues(names)
 end
 end
 
-local CoordGroup = Tabs_Tools:AddLeftGroupbox("坐标管理")
+local CoordGroup = Tabs_Tools:AddLeftGroupbox("坐标管理", "map-pin")
 
 CoordGroup:AddButton("保存当前坐标", function()
 local root = getRootPart()
@@ -5136,7 +5136,7 @@ end
 end
 end)
 
-local TeleportGroup = Tabs_Tools:AddLeftGroupbox("传送工具")
+local TeleportGroup = Tabs_Tools:AddLeftGroupbox("传送工具", "navigation")
 
 TeleportGroup:AddButton("点击传送", function()
 pcall(function()
@@ -5180,7 +5180,7 @@ notify("传送工具", "[XJW]传送工具 已创建，装备后点击传送", 4)
 end)
 end)
 
-local CoordToolGroup = Tabs_Tools:AddRightGroupbox("坐标工具")
+local CoordToolGroup = Tabs_Tools:AddRightGroupbox("坐标工具", "compass")
 
 CoordToolGroup:AddButton("保存坐标到文件", function()
 pcall(function()
@@ -5226,7 +5226,7 @@ notify("坐标", "当前坐标已复制: " .. text, 4)
 end)
 
 
-local IYBox = Tabs_Tools:AddRightGroupbox("IY指令")
+local IYBox = Tabs_Tools:AddRightGroupbox("IY指令", "terminal")
 IYBox:AddButton("执行Dex", function()
 safeLoad("https://github.com/AZYsGithub/DexPlusPlus/releases/latest/download/out.lua")
 end)
@@ -5243,7 +5243,7 @@ IYBox:AddButton("执行mdex", function()
 safeLoad("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
 end)
 
-local ActionBoxR = Tabs.Function:AddRightGroupbox("动作功能")
+local ActionBoxR = Tabs.Function:AddRightGroupbox("动作功能", "clapperboard")
 
 ActionBoxR:AddButton("R6动作包", function()
 pcall(function()
@@ -5431,12 +5431,12 @@ end)
 if not osTabOk or not Tabs_OtherScripts then
 	warn("[XJW] 其他脚本标签创建失败: " .. tostring(osTabErr))
 	pcall(function()
-		Tabs_OtherScripts = Window:AddTab("其他脚本")
+		Tabs_OtherScripts = Window:AddTab("其他脚本", "file")
 	end)
 end
 
 if Tabs_OtherScripts then
-local OtherScriptsBox = Tabs_OtherScripts:AddLeftGroupbox("其他脚本")
+local OtherScriptsBox = Tabs_OtherScripts:AddLeftGroupbox("其他脚本", "folder")
 OtherScriptsBox:AddButton("ROBv4", function()
 safeLoad("https://raw.githubusercontent.com/idrobsc/rob_script/refs/heads/main/rob.v4")
 end)
@@ -5478,7 +5478,7 @@ end)
 if not tabOk or not Tabs_Server then
 	warn("[XJW] 服务器脚本标签创建失败: " .. tostring(tabErr))
 	pcall(function()
-		Tabs_Server = Window:AddTab("服务器脚本(XJW)")
+		Tabs_Server = Window:AddTab("服务器脚本(XJW)", "server")
 	end)
 end
 
@@ -5679,10 +5679,10 @@ end
 local ServerLoadBox
 local ServerInfoBox
 pcall(function()
-	ServerLoadBox = Tabs_Server:AddRightGroupbox("脚本加载")
+	ServerLoadBox = Tabs_Server:AddRightGroupbox("脚本加载", "download")
 end)
 pcall(function()
-	ServerInfoBox = Tabs_Server:AddLeftGroupbox("当前服务器")
+	ServerInfoBox = Tabs_Server:AddLeftGroupbox("当前服务器", "server")
 end)
 
 if ServerLoadBox and ServerInfoBox then
@@ -6038,11 +6038,25 @@ SaveManager:IgnoreThemeSettings()
 SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
 SaveManager:SetFolder("UniversalSilentAim/Configs")
 
+local UnloadTopBox = Tabs["UI Settings"]:AddLeftGroupbox("卸载", "power")
+UnloadTopBox:AddButton("<font color=\"#ff0000\" size=\"18\"><b>卸载UI</b></font>", function()
+	pcall(function()
+		if Library and Library.ScreenGui then
+			Library.ScreenGui:Destroy()
+		end
+	end)
+	pcall(function()
+		if Library and Library.Unload then
+			Library:Unload()
+		end
+	end)
+end)
+
 SaveManager:BuildConfigSection(Tabs["UI Settings"])
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 
 pcall(function()
-	local SndBox = Tabs["UI Settings"]:AddRightGroupbox("音效设置")
+	local SndBox = Tabs["UI Settings"]:AddRightGroupbox("音效设置", "volume-2")
 	local SndTog = SndBox:AddToggle("XJWSndOn", { Text = "开启音效", Default = false })
 	SndTog:OnChanged(function(v)
 		_XJWSnd.set(v)

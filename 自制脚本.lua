@@ -1,1234 +1,188 @@
-local repo = "https://raw.githubusercontent.com/ATLASTEAM01/Obsidian/main/"
-local _startTime = tick()
-local _lastUpdate = "2026年11月9日1时26分"
+local XJWUI_REPO = "jiuyijiuyijiuyi91/UIKu"
+local XJWUI_BRANCH = "main"
+local XJWUI_LOCAL_PATHS = { "XJWUI_v1.lua", "UIKu/XJWUI_v1.lua", "Revenant/obsidian/XJWUI_v1.lua" }
+local XJWUI_URLS = {
+	"https://raw.githubusercontent.com/" .. XJWUI_REPO .. "/" .. XJWUI_BRANCH .. "/XJWUI_v1.lua",
+	"https://cdn.jsdelivr.net/gh/" .. XJWUI_REPO .. "@" .. XJWUI_BRANCH .. "/XJWUI_v1.lua",
+}
+
+local Library
+do
+	for _, path in ipairs(XJWUI_LOCAL_PATHS) do
+		if Library then break end
+		local ok, lib = pcall(function()
+			if type(isfile) == "function" and isfile(path) then
+				return loadstring(readfile(path))()
+			end
+		end)
+		if ok and type(lib) == "table" and type(lib.CreateWindow) == "function" then
+			Library = lib
+		end
+	end
+	if not Library then
+		for _, url in ipairs(XJWUI_URLS) do
+			if Library then break end
+			local ok, lib = pcall(function()
+				return loadstring(game:HttpGet(url))()
+			end)
+			if ok and type(lib) == "table" and type(lib.CreateWindow) == "function" then
+				Library = lib
+			end
+		end
+	end
+end
+
+if type(Library) ~= "table" or type(Library.CreateWindow) ~= "function" then
+	warn("[自制脚本] XJWUI 加载失败: " .. XJWUI_REPO .. "@" .. XJWUI_BRANCH .. "/XJWUI_v1.lua")
+	return
+end
 
 local function safeLoad(url)
-local ok, content = pcall(function()
-return game:HttpGet(url)
-end)
-if ok and content and #content > 0 then
-local fn = loadstring(content)
-if fn then return fn() end
-end
-end
-
-local Library = safeLoad(repo .. "Library.lua")
-
-local _XJWCollapseHook = (function()
-    local function _hookGroupbox(gb)
-        if not gb or type(gb) ~= "table" then
-            return gb
-        end
-        pcall(function()
-            if gb.Collapsed ~= nil then
-                return
-            end
-            local holder = gb.Container and gb.Container.Parent
-            if not holder then
-                return
-            end
-            local btn = Instance.new("TextButton")
-            local uiMain = Library.Scheme and Library.Scheme.MainColor
-            local uiFont = Library.Scheme and Library.Scheme.FontColor
-            btn.BackgroundColor3 = uiMain or Color3.fromRGB(25, 25, 25)
-            btn.BackgroundTransparency = 0.25
-            btn.BorderSizePixel = 0
-            btn.Position = UDim2.new(1, -34, 0, 0)
-            btn.Size = UDim2.fromOffset(34, 34)
-            btn.Text = "<"
-            btn.TextSize = 10
-            btn.TextColor3 = uiFont or Color3.fromRGB(255, 255, 255)
-            btn.AutoButtonColor = true
-            btn.Parent = holder
-            local corner = Instance.new("UICorner")
-            corner.CornerRadius = UDim.new(0, 6)
-            corner.Parent = btn
-            local oldResize = gb.Resize
-            gb.Collapsed = false
-            function gb:SetCollapsed(v)
-                gb.Collapsed = v
-                if gb.Container then
-                    gb.Container.Visible = not v
-                end
-                btn.Text = v and ">" or "<"
-                if v then
-                    if gb.Holder then
-                        gb.Holder.Size = UDim2.new(1, 0, 0, 38 * Library.DPIScale)
-                    end
-                elseif oldResize then
-                    oldResize(gb)
-                end
-            end
-            function gb:Resize()
-                if gb.Collapsed then
-                    if gb.Holder then
-                        gb.Holder.Size = UDim2.new(1, 0, 0, 38 * Library.DPIScale)
-                    end
-                elseif oldResize then
-                    oldResize(gb)
-                end
-            end
-            btn.MouseButton1Click:Connect(function()
-                gb:SetCollapsed(not gb.Collapsed)
-            end)
-        end)
-        return gb
-    end
-    local function _hookTab(tab)
-        if not tab or type(tab) ~= "table" then
-            return tab
-        end
-        pcall(function()
-            local old = tab.AddGroupbox
-            if type(old) ~= "function" then
-                return
-            end
-            function tab:AddGroupbox(info)
-                local gb = old(self, info)
-                return _hookGroupbox(gb)
-            end
-        end)
-        return tab
-    end
-    local function _hookWindow(win)
-        if not win or type(win) ~= "table" then
-            return win
-        end
-        pcall(function()
-            local old = win.AddTab
-            if type(old) ~= "function" then
-                return
-            end
-            function win:AddTab(name, icon)
-                local tab = old(self, name, icon)
-                return _hookTab(tab)
-            end
-        end)
-        return win
-    end
-    local oldCreate = Library.CreateWindow
-    if type(oldCreate) == "function" then
-        function Library:CreateWindow(info)
-            local win = oldCreate(self, info)
-            return _hookWindow(win)
-        end
-    end
-end)()
-
-
-local ThemeManager = (function()
-local cloneref = (cloneref or clonereference or function(instance: any)
-    return instance
-end)
-local clonefunction = (clonefunction or copyfunction or function(func) 
-    return func 
-end)
-
-local HttpService: HttpService = cloneref(game:GetService("HttpService"))
-local isfolder, isfile, listfiles = isfolder, isfile, listfiles
-
-if typeof(clonefunction) == "function" then
-    
-
-    local
-        isfolder_copy,
-        isfile_copy,
-        listfiles_copy = clonefunction(isfolder), clonefunction(isfile), clonefunction(listfiles)
-
-    local isfolder_success, isfolder_error = pcall(function()
-        return isfolder_copy("test" .. tostring(math.random(1000000, 9999999)))
-    end)
-
-    if isfolder_success == false or typeof(isfolder_error) ~= "boolean" then
-        isfolder = function(folder)
-            local success, data = pcall(isfolder_copy, folder)
-            return (if success then data else false)
-        end
-
-        isfile = function(file)
-            local success, data = pcall(isfile_copy, file)
-            return (if success then data else false)
-        end
-
-        listfiles = function(folder)
-            local success, data = pcall(listfiles_copy, folder)
-            return (if success then data else {})
-        end
-    end
-end
-
-local ThemeManager = {}
-do
-    local ThemeFields = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
-    ThemeManager.Folder = "ObsidianLibSettings"
-    
-
-    ThemeManager.Library = nil
-    ThemeManager.AppliedToTab = false
-    ThemeManager.BuiltInThemes = {
-        ["Default"] = {
-            1,
-            { FontColor = "ffffff", MainColor = "0e0e0e", AccentColor = "7d55ff", BackgroundColor = "080808", OutlineColor = "181818" },
-        },
-        ["BBot"] = {
-            2,
-            { FontColor = "ffffff", MainColor = "1e1e1e", AccentColor = "7e48a3", BackgroundColor = "232323", OutlineColor = "141414" },
-        },
-        ["Fatality"] = {
-            3,
-            { FontColor = "ffffff", MainColor = "1e1842", AccentColor = "c50754", BackgroundColor = "191335", OutlineColor = "3c355d" },
-        },
-        ["Jester"] = {
-            4,
-            { FontColor = "ffffff", MainColor = "242424", AccentColor = "db4467", BackgroundColor = "1c1c1c", OutlineColor = "373737" },
-        },
-        ["Mint"] = {
-            5,
-            { FontColor = "ffffff", MainColor = "242424", AccentColor = "3db488", BackgroundColor = "1c1c1c", OutlineColor = "373737" },
-        },
-        ["Tokyo Night"] = {
-            6,
-            { FontColor = "ffffff", MainColor = "191925", AccentColor = "6759b3", BackgroundColor = "16161f", OutlineColor = "323232" },
-        },
-        ["Ubuntu"] = {
-            7,
-            { FontColor = "ffffff", MainColor = "3e3e3e", AccentColor = "e2581e", BackgroundColor = "323232", OutlineColor = "191919" },
-        },
-        ["Quartz"] = {
-            8,
-            { FontColor = "ffffff", MainColor = "232330", AccentColor = "426e87", BackgroundColor = "1d1b26", OutlineColor = "27232f" },
-        },
-        ["Nord"] = {
-            9,
-            { FontColor = "eceff4", MainColor = "3b4252", AccentColor = "88c0d0", BackgroundColor = "2e3440", OutlineColor = "4c566a" },
-        },
-        ["Dracula"] = {
-            10,
-            { FontColor = "f8f8f2", MainColor = "44475a", AccentColor = "ff79c6", BackgroundColor = "282a36", OutlineColor = "6272a4" },
-        },
-        ["Monokai"] = {
-            11,
-            { FontColor = "f8f8f2", MainColor = "272822", AccentColor = "f92672", BackgroundColor = "1e1f1c", OutlineColor = "49483e" },
-        },
-        ["Gruvbox"] = {
-            12,
-            { FontColor = "ebdbb2", MainColor = "3c3836", AccentColor = "fb4934", BackgroundColor = "282828", OutlineColor = "504945" },
-        },
-        ["Solarized"] = {
-            13,
-            { FontColor = "839496", MainColor = "073642", AccentColor = "cb4b16", BackgroundColor = "002b36", OutlineColor = "586e75" },
-        },
-        ["Catppuccin"] = {
-            14,
-            { FontColor = "d9e0ee", MainColor = "302d41", AccentColor = "f5c2e7", BackgroundColor = "1e1e2e", OutlineColor = "575268" },
-        },
-        ["One Dark"] = {
-            15,
-            { FontColor = "abb2bf", MainColor = "282c34", AccentColor = "c678dd", BackgroundColor = "21252b", OutlineColor = "5c6370" },
-        },
-        ["Cyberpunk"] = {
-            16,
-            { FontColor = "f9f9f9", MainColor = "262335", AccentColor = "00ff9f", BackgroundColor = "1a1a2e", OutlineColor = "413c5e" },
-        },
-        ["Oceanic Next"] = {
-            17,
-            { FontColor = "d8dee9", MainColor = "1b2b34", AccentColor = "6699cc", BackgroundColor = "16232a", OutlineColor = "343d46" },
-        },
-        ["Material"] = {
-            18,
-            { FontColor = "eeffff", MainColor = "212121", AccentColor = "82aaff", BackgroundColor = "151515", OutlineColor = "424242" },
-        }
-    }
-
-    function ThemeManager:SetLibrary(library)
-        self.Library = library
-    end
-
-    
-    function ThemeManager:GetPaths()
-        local paths = {}
-
-        local parts = self.Folder:split("/")
-        for idx = 1, #parts do
-            paths[#paths + 1] = table.concat(parts, "/", 1, idx)
-        end
-
-        paths[#paths + 1] = self.Folder .. "/themes"
-
-        return paths
-    end
-
-    function ThemeManager:BuildFolderTree()
-        local paths = self:GetPaths()
-
-        for i = 1, #paths do
-            local str = paths[i]
-            if isfolder(str) then
-                continue
-            end
-            makefolder(str)
-        end
-    end
-
-    function ThemeManager:CheckFolderTree()
-        if isfolder(self.Folder) then
-            return
-        end
-        self:BuildFolderTree()
-
-        task.wait(0.1)
-    end
-
-    function ThemeManager:SetFolder(folder)
-        self.Folder = folder
-        self:BuildFolderTree()
-    end
-
-    
-    function ThemeManager:ApplyTheme(theme)
-        local customThemeData = self:GetCustomTheme(theme)
-        local data = customThemeData or self.BuiltInThemes[theme]
-
-        if not data then
-            return
-        end
-
-        local scheme = data[2]
-        for idx, val in pairs(customThemeData or scheme) do
-            if idx == "VideoLink" then
-                continue
-            elseif idx == "FontFace" then
-                self.Library:SetFont(Enum.Font[val])
-
-                if self.Library.Options[idx] then
-                    self.Library.Options[idx]:SetValue(val)
-                end
-            else
-                self.Library.Scheme[idx] = Color3.fromHex(val)
-
-                if self.Library.Options[idx] then
-                    self.Library.Options[idx]:SetValueRGB(Color3.fromHex(val))
-                end
-            end
-        end
-
-        self:ThemeUpdate()
-    end
-
-    function ThemeManager:ThemeUpdate()
-        for i, field in ThemeFields do
-            if self.Library.Options and self.Library.Options[field] then
-                self.Library.Scheme[field] = self.Library.Options[field].Value
-            end
-        end
-
-        self.Library:UpdateColorsUsingRegistry()
-    end
-
-    
-    function ThemeManager:GetCustomTheme(file)
-        local path = self.Folder .. "/themes/" .. file .. ".json"
-        if not isfile(path) then
-            return nil
-        end
-
-        local data = readfile(path)
-        local success, decoded = pcall(HttpService.JSONDecode, HttpService, data)
-
-        if not success then
-            return nil
-        end
-
-        return decoded
-    end
-
-    function ThemeManager:LoadDefault()
-        local theme = "Default"
-        local content = isfile(self.Folder .. "/themes/default.txt") and readfile(self.Folder .. "/themes/default.txt")
-
-        local isDefault = true
-        if content then
-            if self.BuiltInThemes[content] then
-                theme = content
-            elseif self:GetCustomTheme(content) then
-                theme = content
-                isDefault = false
-            end
-        elseif self.BuiltInThemes[self.DefaultTheme] then
-            theme = self.DefaultTheme
-        end
-
-        if isDefault then
-            self.Library.Options.ThemeManager_ThemeList:SetValue(theme)
-        else
-            self:ApplyTheme(theme)
-        end
-    end
-
-    function ThemeManager:SaveDefault(theme)
-        writefile(self.Folder .. "/themes/default.txt", theme)
-    end
-
-    function ThemeManager:SetDefaultTheme(theme)
-        assert(self.Library, "Must set ThemeManager.Library first!")
-        assert(not self.AppliedToTab, "Cannot set default theme after applying ThemeManager to a tab!")
-
-        local FinalTheme = {}
-        local LibraryScheme = {}
-        for _, field in ThemeFields do
-            if typeof(theme[field]) == "Color3" then
-                FinalTheme[field] = "#" .. theme[field]:ToHex()
-                LibraryScheme[field] = theme[field]
-
-            elseif typeof(theme[field]) == "string" then
-                FinalTheme[field] = if theme[field]:sub(1, 1) == "#" then theme[field] else ("#" .. theme[field])
-                LibraryScheme[field] = Color3.fromHex(theme[field])
-
-            else
-                FinalTheme[field] = ThemeManager.BuiltInThemes["Default"][2][field]
-                LibraryScheme[field] = Color3.fromHex(ThemeManager.BuiltInThemes["Default"][2][field])
-            end
-        end
-
-        if typeof(theme["FontFace"]) == "EnumItem" then
-            FinalTheme["FontFace"] = theme["FontFace"].Name
-            LibraryScheme["Font"] = Font.fromEnum(theme["FontFace"])
-
-        elseif typeof(theme["FontFace"]) == "string" then
-            FinalTheme["FontFace"] = theme["FontFace"]
-            LibraryScheme["Font"] = Font.fromEnum(Enum.Font[theme["FontFace"]])
-
-        else
-            FinalTheme["FontFace"] = "Code"
-            LibraryScheme["Font"] = Font.fromEnum(Enum.Font.Code)
-        end
-
-        for _, field in { "Red", "Dark", "White" } do
-            LibraryScheme[field] = self.Library.Scheme[field]
-        end
-
-        self.Library.Scheme = LibraryScheme
-        self.BuiltInThemes["Default"] = { 1, FinalTheme }
-
-        self.Library:UpdateColorsUsingRegistry()
-    end
-
-    function ThemeManager:SaveCustomTheme(file)
-        if file:gsub(" ", "") == "" then
-            self.Library:Notify("主题文件名无效（为空）", 3)
-            return
-        end
-
-        local theme = {}
-        for _, field in ThemeFields do
-            theme[field] = self.Library.Options[field].Value:ToHex()
-        end
-        theme["FontFace"] = self.Library.Options["FontFace"].Value
-
-        writefile(self.Folder .. "/themes/" .. file .. ".json", HttpService:JSONEncode(theme))
-    end
-
-    function ThemeManager:Delete(name)
-        if not name then
-            return false, "no config file is selected"
-        end
-
-        local file = self.Folder .. "/themes/" .. name .. ".json"
-        if not isfile(file) then
-            return false, "invalid file"
-        end
-
-        local success = pcall(delfile, file)
-        if not success then
-            return false, "delete file error"
-        end
-
-        return true
-    end
-
-    function ThemeManager:ReloadCustomThemes()
-        local list = listfiles(self.Folder .. "/themes")
-
-        local out = {}
-        for i = 1, #list do
-            local file = list[i]
-            if file:sub(-5) == ".json" then
-                
-
-                local pos = file:find(".json", 1, true)
-                local start = pos
-
-                local char = file:sub(pos, pos)
-                while char ~= "/" and char ~= "\\" and char ~= "" do
-                    pos = pos - 1
-                    char = file:sub(pos, pos)
-                end
-
-                if char == "/" or char == "\\" then
-                    table.insert(out, file:sub(pos + 1, start - 1))
-                end
-            end
-        end
-
-        return out
-    end
-
-    
-    function ThemeManager:CreateThemeManager(groupbox)
-        groupbox
-            :AddLabel("背景颜色")
-            :AddColorPicker("BackgroundColor", { Default = self.Library.Scheme.BackgroundColor })
-        groupbox:AddLabel("主颜色"):AddColorPicker("MainColor", { Default = self.Library.Scheme.MainColor })
-        groupbox:AddLabel("强调色"):AddColorPicker("AccentColor", { Default = self.Library.Scheme.AccentColor })
-        groupbox
-            :AddLabel("描边颜色")
-            :AddColorPicker("OutlineColor", { Default = self.Library.Scheme.OutlineColor })
-        groupbox:AddLabel("字体颜色"):AddColorPicker("FontColor", { Default = self.Library.Scheme.FontColor })
-        groupbox:AddDropdown("FontFace", {
-            Text = "字体",
-            Default = "SourceSans",
-            Values = { "BuilderSans", "Code", "Fantasy", "Gotham", "Jura", "Roboto", "RobotoMono", "SourceSans" },
-        })
-
-        local ThemesArray = {}
-        for Name, Theme in pairs(self.BuiltInThemes) do
-            table.insert(ThemesArray, Name)
-        end
-
-        table.sort(ThemesArray, function(a, b)
-            return self.BuiltInThemes[a][1] < self.BuiltInThemes[b][1]
-        end)
-
-        groupbox:AddDivider()
-
-        groupbox:AddDropdown("ThemeManager_ThemeList", { Text = "主题列表", Values = ThemesArray, Default = 1 })
-        groupbox:AddButton("设为默认", function()
-            self:SaveDefault(self.Library.Options.ThemeManager_ThemeList.Value)
-            self.Library:Notify(
-                string.format("已将默认主题设为 %q", self.Library.Options.ThemeManager_ThemeList.Value)
-            )
-        end)
-
-        self.Library.Options.ThemeManager_ThemeList:OnChanged(function()
-            self:ApplyTheme(self.Library.Options.ThemeManager_ThemeList.Value)
-        end)
-
-        groupbox:AddDivider()
-
-        groupbox:AddInput("ThemeManager_CustomThemeName", { Text = "自定义主题名称" })
-        groupbox:AddButton("创建主题", function()
-            local name = self.Library.Options.ThemeManager_CustomThemeName.Value
-
-            if name:gsub(" ", "") == "" then
-                self.Library:Notify("主题名称无效（为空）", 2)
-                return
-            end
-
-            self:SaveCustomTheme(name)
-
-            self.Library:Notify(string.format("已创建主题 %q", name))
-            self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
-            self.Library.Options.ThemeManager_CustomThemeList:SetValue(nil)
-        end)
-
-        groupbox:AddDivider()
-
-        groupbox:AddDropdown(
-            "ThemeManager_CustomThemeList",
-            { Text = "自定义主题", Values = self:ReloadCustomThemes(), AllowNull = true, Default = 1 }
-        )
-        groupbox:AddButton("加载主题", function()
-            local name = self.Library.Options.ThemeManager_CustomThemeList.Value
-
-            self:ApplyTheme(name)
-            self.Library:Notify(string.format("已加载主题 %q", name))
-        end)
-        groupbox:AddButton("覆盖主题", function()
-            local name = self.Library.Options.ThemeManager_CustomThemeList.Value
-
-            self:SaveCustomTheme(name)
-            self.Library:Notify(string.format("已覆盖主题 %q", name))
-        end)
-        groupbox:AddButton("删除主题", function()
-            local name = self.Library.Options.ThemeManager_CustomThemeList.Value
-
-            local success, err = self:Delete(name)
-            if not success then
-                self.Library:Notify("删除主题失败：" .. err)
-                return
-            end
-
-            self.Library:Notify(string.format("已删除主题 %q", name))
-            self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
-            self.Library.Options.ThemeManager_CustomThemeList:SetValue(nil)
-        end)
-        groupbox:AddButton("刷新列表", function()
-            self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
-            self.Library.Options.ThemeManager_CustomThemeList:SetValue(nil)
-        end)
-        groupbox:AddButton("设为默认", function()
-            if
-                self.Library.Options.ThemeManager_CustomThemeList.Value ~= nil
-                and self.Library.Options.ThemeManager_CustomThemeList.Value ~= ""
-            then
-                self:SaveDefault(self.Library.Options.ThemeManager_CustomThemeList.Value)
-                self.Library:Notify(
-                    string.format("已将默认主题设为 %q", self.Library.Options.ThemeManager_CustomThemeList.Value)
-                )
-            end
-        end)
-        groupbox:AddButton("重置默认", function()
-            local success = pcall(delfile, self.Folder .. "/themes/default.txt")
-            if not success then
-                self.Library:Notify("重置默认失败：删除文件错误")
-                return
-            end
-
-            self.Library:Notify("已清除默认主题")
-            self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
-            self.Library.Options.ThemeManager_CustomThemeList:SetValue(nil)
-        end)
-
-        self:LoadDefault()
-        self.AppliedToTab = true
-
-        local function UpdateTheme()
-            self:ThemeUpdate()
-        end
-
-        self.Library.Options.BackgroundColor:OnChanged(UpdateTheme)
-        self.Library.Options.MainColor:OnChanged(UpdateTheme)
-        self.Library.Options.AccentColor:OnChanged(UpdateTheme)
-        self.Library.Options.OutlineColor:OnChanged(UpdateTheme)
-        self.Library.Options.FontColor:OnChanged(UpdateTheme)
-        self.Library.Options.FontFace:OnChanged(function(Value)
-            self.Library:SetFont(Enum.Font[Value])
-            self.Library:UpdateColorsUsingRegistry()
-        end)
-    end
-
-    function ThemeManager:CreateGroupBox(tab)
-        assert(self.Library, "Must set ThemeManager.Library first!")
-        return tab:AddLeftGroupbox("主题", "paintbrush")
-    end
-
-    function ThemeManager:ApplyToTab(tab)
-        assert(self.Library, "Must set ThemeManager.Library first!")
-        local groupbox = self:CreateGroupBox(tab)
-        self:CreateThemeManager(groupbox)
-    end
-
-    function ThemeManager:ApplyToGroupbox(groupbox)
-        assert(self.Library, "Must set ThemeManager.Library first!")
-        self:CreateThemeManager(groupbox)
-    end
-
-    ThemeManager:BuildFolderTree()
-end
-
-getgenv().ObsidianThemeManager = ThemeManager
-return ThemeManager
-
-end)()
-
-local SaveManager = (function()
-local cloneref = (cloneref or clonereference or function(instance: any)
-    return instance
-end)
-local clonefunction = (clonefunction or copyfunction or function(func) 
-    return func 
-end)
-
-local HttpService: HttpService = cloneref(game:GetService("HttpService"))
-local isfolder, isfile, listfiles = isfolder, isfile, listfiles
-
-if typeof(clonefunction) == "function" then
-    
-
-    local
-        isfolder_copy,
-        isfile_copy,
-        listfiles_copy = clonefunction(isfolder), clonefunction(isfile), clonefunction(listfiles)
-
-    local isfolder_success, isfolder_error = pcall(function()
-        return isfolder_copy("test" .. tostring(math.random(1000000, 9999999)))
-    end)
-
-    if isfolder_success == false or typeof(isfolder_error) ~= "boolean" then
-        isfolder = function(folder)
-            local success, data = pcall(isfolder_copy, folder)
-            return (if success then data else false)
-        end
-
-        isfile = function(file)
-            local success, data = pcall(isfile_copy, file)
-            return (if success then data else false)
-        end
-
-        listfiles = function(folder)
-            local success, data = pcall(listfiles_copy, folder)
-            return (if success then data else {})
-        end
-    end
-end
-
-local SaveManager = {} do
-    SaveManager.Folder = "ObsidianLibSettings"
-    SaveManager.SubFolder = ""
-    SaveManager.Ignore = {}
-    SaveManager.Library = nil
-    SaveManager.Parser = {
-        Toggle = {
-            Save = function(idx, object)
-                return { type = "Toggle", idx = idx, value = object.Value }
-            end,
-            Load = function(idx, data)
-                local object = SaveManager.Library.Toggles[idx]
-                if object and object.Value ~= data.value then
-                    object:SetValue(data.value)
-                end
-            end,
-        },
-        Slider = {
-            Save = function(idx, object)
-                return { type = "Slider", idx = idx, value = tostring(object.Value) }
-            end,
-            Load = function(idx, data)
-                local object = SaveManager.Library.Options[idx]
-                if object and object.Value ~= data.value then
-                    object:SetValue(data.value)
-                end
-            end,
-        },
-        Dropdown = {
-            Save = function(idx, object)
-                return { type = "Dropdown", idx = idx, value = object.Value, mutli = object.Multi }
-            end,
-            Load = function(idx, data)
-                local object = SaveManager.Library.Options[idx]
-                if object and object.Value ~= data.value then
-                    object:SetValue(data.value)
-                end
-            end,
-        },
-        ColorPicker = {
-            Save = function(idx, object)
-                return { type = "ColorPicker", idx = idx, value = object.Value:ToHex(), transparency = object.Transparency }
-            end,
-            Load = function(idx, data)
-                if SaveManager.Library.Options[idx] then
-                    SaveManager.Library.Options[idx]:SetValueRGB(Color3.fromHex(data.value), data.transparency)
-                end
-            end,
-        },
-        KeyPicker = {
-            Save = function(idx, object)
-                return { type = "KeyPicker", idx = idx, mode = object.Mode, key = object.Value, modifiers = object.Modifiers }
-            end,
-            Load = function(idx, data)
-                if SaveManager.Library.Options[idx] then
-                    SaveManager.Library.Options[idx]:SetValue({ data.key, data.mode, data.modifiers })
-                end
-            end,
-        },
-        Input = {
-            Save = function(idx, object)
-                return { type = "Input", idx = idx, text = object.Value }
-            end,
-            Load = function(idx, data)
-                local object = SaveManager.Library.Options[idx]
-                if object and object.Value ~= data.text and type(data.text) == "string" then
-                    SaveManager.Library.Options[idx]:SetValue(data.text)
-                end
-            end,
-        },
-    }
-
-    function SaveManager:SetLibrary(library)
-        self.Library = library
-    end
-
-    function SaveManager:IgnoreThemeSettings()
-        self:SetIgnoreIndexes({
-            "BackgroundColor", "MainColor", "AccentColor", "OutlineColor", "FontColor", "FontFace", 
-            "ThemeManager_ThemeList", "ThemeManager_CustomThemeList", "ThemeManager_CustomThemeName", 
-        })
-    end
-
-    
-    function SaveManager:CheckSubFolder(createFolder)
-        if typeof(self.SubFolder) ~= "string" or self.SubFolder == "" then return false end
-
-        if createFolder == true then
-            if not isfolder(self.Folder .. "/settings/" .. self.SubFolder) then
-                makefolder(self.Folder .. "/settings/" .. self.SubFolder)
-            end
-        end
-
-        return true
-    end
-
-    function SaveManager:GetPaths()
-        local paths = {}
-
-        local parts = self.Folder:split("/")
-        for idx = 1, #parts do
-            local path = table.concat(parts, "/", 1, idx)
-            if not table.find(paths, path) then paths[#paths + 1] = path end
-        end
-
-        paths[#paths + 1] = self.Folder .. "/themes"
-        paths[#paths + 1] = self.Folder .. "/settings"
-
-        if self:CheckSubFolder(false) then
-            local subFolder = self.Folder .. "/settings/" .. self.SubFolder
-            parts = subFolder:split("/")
-
-            for idx = 1, #parts do
-                local path = table.concat(parts, "/", 1, idx)
-                if not table.find(paths, path) then paths[#paths + 1] = path end
-            end
-        end
-
-        return paths
-    end
-
-    function SaveManager:BuildFolderTree()
-        local paths = self:GetPaths()
-
-        for i = 1, #paths do
-            local str = paths[i]
-            if isfolder(str) then continue end
-
-            makefolder(str)
-        end
-    end
-
-    function SaveManager:CheckFolderTree()
-        if isfolder(self.Folder) then return end
-        SaveManager:BuildFolderTree()
-
-        task.wait(0.1)
-    end
-
-    function SaveManager:SetIgnoreIndexes(list)
-        for _, key in pairs(list) do
-            self.Ignore[key] = true
-        end
-    end
-
-    function SaveManager:SetFolder(folder)
-        self.Folder = folder
-        self:BuildFolderTree()
-    end
-
-    function SaveManager:SetSubFolder(folder)
-        self.SubFolder = folder
-        self:BuildFolderTree()
-    end
-
-    
-    function SaveManager:Save(name)
-        if (not name) then
-            return false, "no config file is selected"
-        end
-        SaveManager:CheckFolderTree()
-
-        local fullPath = self.Folder .. "/settings/" .. name .. ".json"
-        if SaveManager:CheckSubFolder(true) then
-            fullPath = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
-        end
-
-        local data = {
-            objects = {}
-        }
-
-        for idx, toggle in pairs(self.Library.Toggles) do
-            if not toggle.Type then continue end
-            if not self.Parser[toggle.Type] then continue end
-            if self.Ignore[idx] then continue end
-
-            table.insert(data.objects, self.Parser[toggle.Type].Save(idx, toggle))
-        end
-
-        for idx, option in pairs(self.Library.Options) do
-            if not option.Type then continue end
-            if not self.Parser[option.Type] then continue end
-            if self.Ignore[idx] then continue end
-
-            table.insert(data.objects, self.Parser[option.Type].Save(idx, option))
-        end
-
-        local success, encoded = pcall(HttpService.JSONEncode, HttpService, data)
-        if not success then
-            return false, "failed to encode data"
-        end
-
-        writefile(fullPath, encoded)
-        return true
-    end
-
-    function SaveManager:Load(name)
-        if (not name) then
-            return false, "no config file is selected"
-        end
-        SaveManager:CheckFolderTree()
-
-        local file = self.Folder .. "/settings/" .. name .. ".json"
-        if SaveManager:CheckSubFolder(true) then
-            file = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
-        end
-
-        if not isfile(file) then return false, "invalid file" end
-
-        local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
-        if not success then return false, "decode error" end
-
-        for _, option in pairs(decoded.objects) do
-            if not option.type then continue end
-            if not self.Parser[option.type] then continue end
-            if self.Ignore[option.idx] then continue end
-
-            task.spawn(self.Parser[option.type].Load, option.idx, option) 
-        end
-
-        return true
-    end
-
-    function SaveManager:Delete(name)
-        if (not name) then
-            return false, "no config file is selected"
-        end
-
-        local file = self.Folder .. "/settings/" .. name .. ".json"
-        if SaveManager:CheckSubFolder(true) then
-            file = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
-        end
-
-        if not isfile(file) then return false, "invalid file" end
-
-        local success = pcall(delfile, file)
-        if not success then return false, "delete file error" end
-
-        return true
-    end
-
-    function SaveManager:RefreshConfigList()
-        local success, data = pcall(function()
-            SaveManager:CheckFolderTree()
-
-            local list = {}
-            local out = {}
-
-            if SaveManager:CheckSubFolder(true) then
-                list = listfiles(self.Folder .. "/settings/" .. self.SubFolder)
-            else
-                list = listfiles(self.Folder .. "/settings")
-            end
-            if typeof(list) ~= "table" then list = {} end
-
-            for i = 1, #list do
-                local file = list[i]
-                if file:sub(-5) == ".json" then
-                    
-
-                    local pos = file:find(".json", 1, true)
-                    local start = pos
-
-                    local char = file:sub(pos, pos)
-                    while char ~= "/" and char ~= "\\" and char ~= "" do
-                        pos = pos - 1
-                        char = file:sub(pos, pos)
-                    end
-
-                    if char == "/" or char == "\\" then
-                        table.insert(out, file:sub(pos + 1, start - 1))
-                    end
-                end
-            end
-
-            return out
-        end)
-
-        if (not success) then
-            if self.Library then
-                self.Library:Notify("Failed to load config list: " .. tostring(data))
-            else
-                warn("Failed to load config list: " .. tostring(data))
-            end
-
-            return {}
-        end
-
-        return data
-    end
-
-    
-    function SaveManager:GetAutoloadConfig()
-        SaveManager:CheckFolderTree()
-
-        local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-        if SaveManager:CheckSubFolder(true) then
-            autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
-        end
-
-        if isfile(autoLoadPath) then
-            local successRead, name = pcall(readfile, autoLoadPath)
-            if not successRead then
-                return "none"
-            end
-
-            name = tostring(name)
-            return if name == "" then "none" else name
-        end
-
-        return "none"
-    end
-
-    function SaveManager:LoadAutoloadConfig()
-        SaveManager:CheckFolderTree()
-
-        local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-        if SaveManager:CheckSubFolder(true) then
-            autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
-        end
-
-        if isfile(autoLoadPath) then
-            local successRead, name = pcall(readfile, autoLoadPath)
-            if not successRead then
-                self.Library:Notify("Failed to load autoload config: write file error")
-                return
-            end
-
-            local success, err = self:Load(name)
-            if not success then
-                self.Library:Notify("Failed to load autoload config: " .. err)
-                return
-            end
-
-            self.Library:Notify(string.format("Auto loaded config %q", name))
-        end
-    end
-
-    function SaveManager:SaveAutoloadConfig(name)
-        SaveManager:CheckFolderTree()
-
-        local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-        if SaveManager:CheckSubFolder(true) then
-            autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
-        end
-
-        local success = pcall(writefile, autoLoadPath, name)
-        if not success then return false, "write file error" end
-
-        return true, ""
-    end
-
-    function SaveManager:DeleteAutoLoadConfig()
-        SaveManager:CheckFolderTree()
-
-        local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-        if SaveManager:CheckSubFolder(true) then
-            autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
-        end
-
-        local success = pcall(delfile, autoLoadPath)
-        if not success then return false, "delete file error" end
-
-        return true, ""
-    end
-
-    
-    function SaveManager:BuildConfigSection(tab)
-        assert(self.Library, "Must set SaveManager.Library")
-
-        local section = tab:AddRightGroupbox("配置", "folder-cog")
-
-        section:AddInput("SaveManager_ConfigName",    { Text = "配置名称" })
-        section:AddButton("创建配置", function()
-            local name = self.Library.Options.SaveManager_ConfigName.Value
-
-            if name:gsub(" ", "") == "" then
-                self.Library:Notify("配置名称无效（为空）", 2)
-                return
-            end
-
-            local success, err = self:Save(name)
-            if not success then
-                self.Library:Notify("创建配置失败：" .. err)
-                return
-            end
-
-            self.Library:Notify(string.format("已创建配置 %q", name))
-            self.Library.Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
-            self.Library.Options.SaveManager_ConfigList:SetValue(nil)
-        end)
-
-        section:AddDivider()
-
-        section:AddDropdown("SaveManager_ConfigList", { Text = "配置列表", Values = self:RefreshConfigList(), AllowNull = true })
-        section:AddButton("加载配置", function()
-            local name = self.Library.Options.SaveManager_ConfigList.Value
-
-            local success, err = self:Load(name)
-            if not success then
-                self.Library:Notify("加载配置失败：" .. err)
-                return
-            end
-
-            self.Library:Notify(string.format("已加载配置 %q", name))
-        end)
-        section:AddButton("覆盖配置", function()
-            local name = self.Library.Options.SaveManager_ConfigList.Value
-
-            local success, err = self:Save(name)
-            if not success then
-                self.Library:Notify("覆盖配置失败：" .. err)
-                return
-            end
-
-            self.Library:Notify(string.format("已覆盖配置 %q", name))
-        end)
-
-        section:AddButton("删除配置", function()
-            local name = self.Library.Options.SaveManager_ConfigList.Value
-
-            local success, err = self:Delete(name)
-            if not success then
-                self.Library:Notify("删除配置失败：" .. err)
-                return
-            end
-
-            self.Library:Notify(string.format("已删除配置 %q", name))
-            self.Library.Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
-            self.Library.Options.SaveManager_ConfigList:SetValue(nil)
-        end)
-
-        section:AddButton("刷新列表", function()
-            self.Library.Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
-            self.Library.Options.SaveManager_ConfigList:SetValue(nil)
-        end)
-
-        section:AddButton("设为自动加载", function()
-            local name = self.Library.Options.SaveManager_ConfigList.Value
-
-            local success, err = self:SaveAutoloadConfig(name)
-            if not success then
-                self.Library:Notify("设置自动加载失败：" .. err)
-                return
-            end
-
-            self.Library:Notify(string.format("已将 %q 设为自动加载", name))
-            self.AutoloadConfigLabel:SetText("当前自动加载配置：" .. name)
-        end)
-        section:AddButton("重置自动加载", function()
-            local success, err = self:DeleteAutoLoadConfig()
-            if not success then
-                self.Library:Notify("设置自动加载失败：" .. err)
-                return
-            end
-
-            self.Library:Notify("已清除自动加载")
-            self.AutoloadConfigLabel:SetText("当前自动加载配置：无")
-        end)
-
-        self.AutoloadConfigLabel = section:AddLabel("当前自动加载配置：" .. self:GetAutoloadConfig(), true)
-
-        
-        self:SetIgnoreIndexes({ "SaveManager_ConfigList", "SaveManager_ConfigName" })
-    end
-
-    SaveManager:BuildFolderTree()
-end
-
-return SaveManager
-
-end)()
-
-local Options = Library.Options
-local Toggles = Library.Toggles
-
-local Window = Library:CreateWindow({ Title = "XJW中心", Footer = "XJW", Center = true, AutoShow = false })
-
-local _XJWSnd = (function()
-	local on = false
-	local sndDing = nil
-	local function asset(path)
-		local ok, a = pcall(getcustomasset, path)
-		if ok and a then
-			return a
+	local ok, content = pcall(function()
+		return game:HttpGet(url)
+	end)
+	if ok and content and #content > 0 then
+		local fn = loadstring(content)
+		if fn then
+			return fn()
 		end
 	end
-	task.spawn(function()
-		local ok, result = pcall(game.HttpGet, game, "https://raw.githubusercontent.com/kongbaNB/TB/refs/heads/main/DING.WAV")
-		if ok and result then
-			pcall(function()
-				if makefolder and not isfolder("恐脚本") then
-					makefolder("恐脚本")
+end
+
+local HttpService = game:GetService("HttpService")
+local _startTime = tick()
+local _lastUpdate = "2026年11月13日2时53分"
+local ThemeManager = Library.ThemeManager
+local SaveManager = Library.SaveManager
+
+local Window = Library:CreateWindow()
+
+if type(Library.EnableChinese) == "function" then
+	Library:EnableChinese(true)
+end
+
+do
+	local Exact = {
+		["Reset"] = "重置",
+		["No theme is selected"] = "未选择主题",
+		["Theme not found"] = "未找到该主题",
+		["No JSON provided"] = "未提供 JSON 内容",
+		["Failed to decode theme data"] = "主题数据解析失败",
+		["Failed to encode data"] = "数据编码失败",
+		["Autoload config is not set"] = "未设置自动加载配置",
+		["Invalid path provided"] = "路径无效",
+		["Are you sure you want to clear the default theme? The library will revert to its built-in default on next load."] = "确定清空默认主题？下次加载时库会回退到内置默认主题。",
+		["Are you sure you want to import this theme? Your current colors will be overwritten."] = "确定导入该主题？当前配色将被覆盖。",
+	}
+
+	local Colors = {
+		["Main color"] = "主色",
+		["Background color"] = "背景色",
+		["Accent color"] = "强调色",
+		["Outline color"] = "描边色",
+		["Font color"] = "字体色",
+	}
+
+	local Patterns = {
+		{ "^Are you sure you want to delete (.-)%? This cannot be undone%.$", "确定要删除 %1 吗？此操作无法撤销。" },
+		{ "^Are you sure you want to overwrite (.-) with your current colors%? This cannot be undone%.$", "确定用当前配色覆盖 %1 吗？此操作无法撤销。" },
+		{ "^Are you sure you want to overwrite (.-) with your current settings%? This cannot be undone%.$", "确定用当前配置覆盖 %1 吗？此操作无法撤销。" },
+		{ "^Are you sure you want to load (.-)%? Your current settings will be overwritten%.$", "确定加载 %1 吗？当前配置将被覆盖。" },
+		{ "^A custom theme named (.-) already exists%. Overwriting it will replace it with your current colors%.$", "名为 %1 的自定义主题已存在，覆盖后将替换为当前配色。" },
+		{ "^A config named (.-) already exists%. Overwriting will replace it with your current settings%.$", "名为 %1 的配置已存在，覆盖后将替换为当前配置。" },
+		{ "^This theme has a contrast ratio of (.-):1 between (.-), below the recommended (.-):1%. Text may be hard to read%. Save anyway%?$", "该主题的对比度为 %1:1（%2），低于建议的 %3:1，文本可能不易阅读。仍要保存吗？" },
+	}
+
+	local function TranslateExtra(Text)
+		if type(Text) ~= "string" or Text == "" then
+			return Text
+		end
+		local Hit = Exact[Text]
+		if Hit then
+			return Hit
+		end
+		for i = 1, #Patterns do
+			local Pattern = Patterns[i][1]
+			if string.find(Text, Pattern) then
+				local Ok, Result = pcall(string.gsub, Text, Pattern, Patterns[i][2])
+				if Ok and type(Result) == "string" and Result ~= Text then
+					for En, Cn in pairs(Colors) do
+						if string.find(Result, En, 1, true) then
+							Result = string.gsub(Result, En, Cn)
+						end
+					end
+					return Result
 				end
-				writefile("恐脚本/DING.WAV", result)
-			end)
-			local a = asset("恐脚本/DING.WAV")
-			if a then
-				sndDing = a
 			end
 		end
-	end)
-	local function play()
-		if not on then
-			return
-		end
-		if not sndDing then
-			sndDing = asset("恐脚本/DING.WAV")
-		end
-		if not sndDing then
-			return
-		end
+		return Text
+	end
+
+	local function ApplyExtra(Object)
 		pcall(function()
-			local s = Instance.new("Sound")
-			s.SoundId = sndDing
-			s.Volume = 2
-			s.Parent = game:GetService("SoundService")
-			game:GetService("SoundService"):PlayLocalSound(s)
-			s.Ended:Connect(function()
-				s:Destroy()
-			end)
+			if Object:IsA("TextLabel") or Object:IsA("TextButton") or Object:IsA("TextBox") then
+				local Text = Object.Text
+				if type(Text) == "string" and Text ~= "" then
+					local New = TranslateExtra(Text)
+					if New ~= Text then
+						Object.Text = New
+					end
+				end
+			end
 		end)
 	end
-	local function hook(sg)
-		local function add(d)
-			if (d:IsA("TextButton") or d:IsA("ImageButton")) and not d:GetAttribute("XJWS") then
-				d:SetAttribute("XJWS", true)
-				d.MouseButton1Click:Connect(play)
-			end
+
+	local function ScanExtra()
+		local Gui = Library.ScreenGui
+		if not Gui then
+			return
 		end
-		sg.DescendantAdded:Connect(add)
-		for _, v in ipairs(sg:GetDescendants()) do add(v) end
+		local Ok, List = pcall(function()
+			return Gui:GetDescendants()
+		end)
+		if not Ok or type(List) ~= "table" then
+			return
+		end
+		for _, Object in ipairs(List) do
+			ApplyExtra(Object)
+		end
 	end
-	return { play = play, hook = hook, set = function(v) on = v end }
-end)()
-pcall(function()
-	_XJWSnd.hook(Library.ScreenGui)
-end)
 
-local _cnScheme = Library.Scheme
-_cnScheme.BackgroundColor = Color3.fromRGB(8, 8, 8)
-_cnScheme.MainColor = Color3.fromRGB(14, 14, 14)
-_cnScheme.OutlineColor = Color3.fromRGB(40, 40, 40)
-pcall(function()
-	Library:SetFont(Enum.Font.SourceSans)
-	Library:UpdateColorsUsingRegistry()
-end)
-
-pcall(function()
-	if Library and Library.ScreenGui then
-		Library.ScreenGui.Enabled = false
+	local Gui = Library.ScreenGui
+	if Gui then
+		Gui.DescendantAdded:Connect(function(Object)
+			if Object:IsA("TextLabel") or Object:IsA("TextButton") or Object:IsA("TextBox") then
+				task.defer(ApplyExtra, Object)
+				task.delay(0.1, ApplyExtra, Object)
+			end
+		end)
 	end
-	Library.Toggled = false
-end)
+
+	task.spawn(function()
+		for _ = 1, 20 do
+			ScanExtra()
+			task.wait(0.25)
+		end
+		while true do
+			ScanExtra()
+			task.wait(1)
+		end
+	end)
+end
+
+if type(Library.InstallNotify) == "function" then
+	Library:InstallNotify("自制脚本")
+end
+if type(Library.InstallBackground) == "function" then
+	Library:InstallBackground()
+end
+if type(Library.StyleSidebar) == "function" then
+	Library:StyleSidebar()
+end
 
 local Tabs = {
 Announcement = Window:AddTab("公告", "megaphone"),
+ScriptInfo = Window:AddTab("脚本信息", "info"),
 Main = Window:AddTab("通用", "user"),
 TP = Window:AddTab("传送和甩飞", "send"),
 Visual = Window:AddTab("视觉", "eye"),
@@ -1394,6 +348,9 @@ pcall(function()
 game.StarterGui:SetCore("SendNotification", { Title = "成功", Text = "QQ群已复制到剪贴板", Duration = 3 })
 end)
 end)
+
+local ScriptInfoBox = Tabs.ScriptInfo:AddLeftGroupbox("脚本信息", "info")
+ScriptInfoBox:AddLabel({ Text = "此脚本仅i一人制作", DoesWrap = true })
 
 do
 local plrs = game:GetService("Players")
@@ -6031,20 +4988,9 @@ end
 end
 
 Tabs["UI Settings"] = Window:AddTab("UI设置", "settings")
-ThemeManager:SetLibrary(Library)
-SaveManager:SetLibrary(Library)
-
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
-SaveManager:SetFolder("UniversalSilentAim/Configs")
 
 local UnloadTopBox = Tabs["UI Settings"]:AddLeftGroupbox("卸载", "power")
 UnloadTopBox:AddButton("<font color=\"#ff0000\" size=\"18\"><b>卸载UI</b></font>", function()
-	pcall(function()
-		if Library and Library.ScreenGui then
-			Library.ScreenGui:Destroy()
-		end
-	end)
 	pcall(function()
 		if Library and Library.Unload then
 			Library:Unload()
@@ -6052,18 +4998,34 @@ UnloadTopBox:AddButton("<font color=\"#ff0000\" size=\"18\"><b>卸载UI</b></fon
 	end)
 end)
 
-SaveManager:BuildConfigSection(Tabs["UI Settings"])
-ThemeManager:ApplyToTab(Tabs["UI Settings"])
-
-pcall(function()
-	local SndBox = Tabs["UI Settings"]:AddRightGroupbox("音效设置", "volume-2")
-	local SndTog = SndBox:AddToggle("XJWSndOn", { Text = "开启音效", Default = false })
-	SndTog:OnChanged(function(v)
-		_XJWSnd.set(v)
-	end)
-end)
-
-SaveManager:LoadAutoloadConfig()
+do
+	local SettingsTab = Tabs["UI Settings"]
+	local SettingsFolder = "UniversalSilentAim/Configs"
+	if type(SettingsTab) == "table" then
+		if type(ThemeManager) == "table" then
+			pcall(function()
+				ThemeManager:SetLibrary(Library)
+				ThemeManager:SetFolder(SettingsFolder)
+				ThemeManager:ApplyToTab(SettingsTab)
+			end)
+		end
+		if type(SaveManager) == "table" then
+			pcall(function()
+				SaveManager:SetLibrary(Library)
+				SaveManager:SetFolder(SettingsFolder)
+				SaveManager:BuildConfigSection(SettingsTab)
+				SaveManager:LoadAutoloadConfig()
+			end)
+		end
+		if type(Library.InstallBackgroundDropdown) == "function" then
+			task.defer(function()
+				pcall(function()
+					Library:InstallBackgroundDropdown(SettingsTab, {})
+				end)
+			end)
+		end
+	end
+end
 
 local _elapsed = tick() - _startTime
 local _msg = string.format("耗时 %.2f 秒", _elapsed)

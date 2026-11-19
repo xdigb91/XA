@@ -1,148 +1,89 @@
-local _XJBoot=(function()
+local __XJW_T0=tick()
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local UIS=game:GetService("UserInputService")
 local HttpService=game:GetService("HttpService")
 local LocalPlayer=Players.LocalPlayer
-local REPO="https://gitlab.com/aristooey/Obsidian/-/raw/main/"
-local DIR="Revenant"
-local DIR_LIB=DIR.."/obsidian"
-local DIR_ASSETS=DIR.."/assets"
-local PATH_LIB=DIR_LIB.."/Library.lua"
-local PATH_THEME=DIR_LIB.."/ThemeManager.lua"
-local PATH_SAVE=DIR_LIB.."/SaveManager.lua"
-local FILES={
-{PATH_LIB,"Library.lua"},
-{PATH_THEME,"addons/ThemeManager.lua"},
-{PATH_SAVE,"addons/SaveManager.lua"},
-}
-local function safe(fn,...)
-local ok,res=pcall(fn,...)
-if ok then return res end
-return nil
-end
-local function ensureFolders()
-safe(function()if not isfolder(DIR)then makefolder(DIR)end end)
-safe(function()if not isfolder(DIR_LIB)then makefolder(DIR_LIB)end end)
-safe(function()if not isfolder(DIR_ASSETS)then makefolder(DIR_ASSETS)end end)
-end
-local function canFile()
-return type(isfile)=="function"and type(writefile)=="function"and type(loadfile)=="function"
-end
-local function writeSource(path,url)
-local ok=pcall(function()
-writefile(path,game:HttpGet(url))
-end)
-return ok
-end
-local function downloadAll()
-for _,f in ipairs(FILES)do
-writeSource(f[1],REPO..f[2])
-end
-end
-local function loadLocal(path)
-if not canFile()then return nil end
-local ok,res=pcall(function()
-return loadfile(path)()
-end)
-if ok and type(res)=="table"then return res end
-return nil
-end
-local function loadRemote(name)
-local ok,res=pcall(function()
-return loadstring(game:HttpGet(REPO..name..".lua"))()
-end)
-if ok and type(res)=="table"then return res end
-return nil
-end
-ensureFolders()
-if canFile()then
-local missing=false
-for _,f in ipairs(FILES)do
-if not safe(isfile,f[1])then missing=true end
-end
-if missing then downloadAll()end
-end
 local XJWUI_REPO="https://raw.githubusercontent.com/jiuyijiuyijiuyi91/UIKu/main/"
 local XJWUI_CDN="https://cdn.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu@main/"
-local XJWUI_FILES={"XJWUI_v3.lua","XJWUI_v1.lua"}
-local XJWUI_LOCAL={"XJWUI_v3.lua","UIKu/XJWUI_v3.lua","Revenant/obsidian/XJWUI_v3.lua","XJWUI_v1.lua","UIKu/XJWUI_v1.lua"}
+local XJWUI_NAME="XJWUI_v1.lua"
+local XJWUI_LOCAL={"XJWUI_v1.lua","UIKu/XJWUI_v1.lua"}
+local function canFile()
+return type(isfile) == "function" and type(readfile) == "function" and type(loadstring) == "function"
+end
 local function loadXJWUI()
 local lib
-for _,path in ipairs(XJWUI_LOCAL)do
+for _,path in ipairs(XJWUI_LOCAL) do
 if lib then break end
 local ok,res=pcall(function()
-if type(isfile)=="function"and isfile(path)then
+if canFile() and isfile(path) then
 return loadstring(readfile(path))()
 end
 end)
-if ok and type(res)=="table"and type(res.CreateWindow)=="function"then
+if ok and type(res) == "table" and type(res.CreateWindow) == "function" then
 lib=res
 end
 end
-if lib then return lib end
-for _,name in ipairs(XJWUI_FILES)do
-if lib then break end
-for _,root in ipairs({XJWUI_REPO,XJWUI_CDN})do
+for _,root in ipairs({XJWUI_CDN,XJWUI_REPO}) do
 if lib then break end
 local ok,res=pcall(function()
-return loadstring(game:HttpGet(root..name))()
+return loadstring(game:HttpGet(root .. XJWUI_NAME))()
 end)
-if ok and type(res)=="table"and type(res.CreateWindow)=="function"then
+if ok and type(res) == "table" and type(res.CreateWindow) == "function" then
 lib=res
-end
 end
 end
 return lib
 end
 local Library=loadXJWUI()
-if Library and Library.CreateLoading==nil then
-if canFile()then
-downloadAll()
-Library=loadLocal(PATH_LIB)
-end
-end
-if not Library then
-if canFile()then
-downloadAll()
-Library=loadLocal(PATH_LIB)
-end
-end
-if not Library then
-Library=loadRemote("Library")
-end
-if type(Library)~="table"or Library.CreateWindow==nil or Library.CreateLoading==nil then
-Library=loadRemote("Library")
-end
-if type(Library)~="table"or Library.CreateWindow==nil then
-warn("[移速修改] Obsidian 库加载失败")
+if type(Library) ~= "table" or Library.CreateWindow == nil or Library.CreateLoading == nil then
+warn("[XJW中心] XJWUI 库加载失败")
 return
 end
 Library.ForceCheckbox=true
-return{Library=Library,LocalPlayer=LocalPlayer,RunService=RunService,UIS=UIS,HttpService=HttpService}
-end)()
-if type(_XJBoot)~="table"or _XJBoot.Library==nil then
-warn("[自制脚本] UI 库加载失败")
-return
+local function guardPrimaryPartCFrame()
+if type(hookmetamethod) ~= "function" or type(getnamecallmethod) ~= "function" then return end
+pcall(function()
+if type(getgenv) == "function" then
+local env=getgenv()
+if type(env) == "table" then
+if env.__revPPCFGuard then return end
+env.__revPPCFGuard=true
 end
-local Library=_XJBoot.Library
-local LocalPlayer=_XJBoot.LocalPlayer
-local RunService=_XJBoot.RunService
-local UIS=_XJBoot.UIS
-local HttpService=_XJBoot.HttpService
+end
+local oldNamecall
+local function hookFn(self,...)
+if getnamecallmethod() == "SetPrimaryPartCFrame" then
+local isModel=false
+pcall(function() isModel=self:IsA("Model") end)
+if isModel then
+local hasPart=false
+pcall(function() hasPart=self.PrimaryPart ~= nil end)
+if not hasPart then
+local cf=select(1,...)
+pcall(function() self:PivotTo(cf) end)
+return self
+end
+end
+end
+if type(oldNamecall) ~= "function" then return end
+return oldNamecall(self,...)
+end
+if type(newcclosure) == "function" then
+local okWrap,wrapped=pcall(newcclosure,hookFn)
+if okWrap and type(wrapped) == "function" then hookFn=wrapped end
+end
+oldNamecall=hookmetamethod(game,"__namecall",hookFn)
+end)
+end
+guardPrimaryPartCFrame()
+local ThemeManager=Library.ThemeManager
+local SaveManager=Library.SaveManager
+local BACKGROUND_IMAGE="https://raw.githubusercontent.com/jiuyijiuyijiuyi91/XJW666/refs/heads/main/XJW%E8%84%9A%E6%9C%AC%E5%A3%81%E7%BA%B8.png"
 local BOOT
 do
 local TS=game:GetService("TweenService")
 local PlayerGui=LocalPlayer:WaitForChild("PlayerGui")
-local OPTIONS={"灵动岛","悬浮窗","黑曜石悬浮窗"}
-local DEFAULT_SCHEME={
-BackgroundColor=Color3.fromRGB(15,15,15),
-MainColor=Color3.fromRGB(25,25,25),
-AccentColor=Color3.fromRGB(125,85,255),
-OutlineColor=Color3.fromRGB(40,40,40),
-FontColor=Color3.new(1,1,1),
-DarkColor=Color3.new(0,0,0),
-}
 BOOT={
 styleKey=nil,
 picked=false,
@@ -152,60 +93,17 @@ finished=false,
 apply=nil,
 dropdown=nil,
 }
-local loading
-local progress=0
-local buttons={}
-local named={}
-local pickerGui=Instance.new("ScreenGui")
-pickerGui.Name="XJWBootStylePicker"
-pickerGui.ResetOnSpawn=false
-pickerGui.IgnoreGuiInset=true
-pickerGui.DisplayOrder=2147483646
-if not pcall(function()pickerGui.Parent=PlayerGui end)then
-pickerGui=nil
-end
-local function paint()
-local accent=Color3.fromRGB(245,197,66)
-local idle=Color3.fromRGB(40,30,8)
-local font=Color3.new(1,1,1)
-local onAccent=Color3.fromRGB(25,18,2)
-for label,btn in pairs(named)do
-if BOOT.styleKey==label then
-pcall(function()
-btn.BackgroundColor3=accent
-btn.TextColor3=onAccent
-end)
-else
-pcall(function()
-btn.BackgroundColor3=idle
-btn.TextColor3=font
-end)
-end
-end
-end
-local function setStage(step)
-progress=step
-if loading then
-pcall(function()loading:SetCurrentStep(step)end)
-end
-end
-local function destroyPicker()
-if not pickerGui then return end
-pcall(function()pickerGui:Destroy()end)
-pickerGui=nil
-named={}
-end
 local function hideAllFloats()
 pcall(function()
 local ui=Library and Library.XJWUI
 if not ui then return end
 ui.FloatStyle="off"
 if ui.FloatGui then
-pcall(function()ui.FloatGui:Destroy()end)
+pcall(function() ui.FloatGui:Destroy() end)
 ui.FloatGui=nil
 end
 if ui.FloatScreen then
-pcall(function()ui.FloatScreen:Destroy()end)
+pcall(function() ui.FloatScreen:Destroy() end)
 ui.FloatScreen=nil
 end
 end)
@@ -213,9 +111,9 @@ pcall(function()
 local holder=Library and Library.Floats
 if not holder then return end
 local list=holder:GetDescendants()
-if type(list)~="table"then return end
-for _,item in ipairs(list)do
-if item:IsA("GuiObject")then
+if type(list) ~= "table" then return end
+for _,item in ipairs(list) do
+if item:IsA("GuiObject") then
 item.Visible=false
 end
 end
@@ -226,282 +124,25 @@ hideAllFloats()
 task.spawn(function()
 while not BOOT.finished do
 hideAllFloats()
-task.wait(0.12)
+task.wait(0.25)
 end
 end)
-local wipeGui=nil
-local WIPE_COLOR=Color3.fromRGB(245,197,66)
-local function buildWipe()
-local shade=nil
-pcall(function()
-local gui=Instance.new("ScreenGui")
-gui.Name="SkinHubStyleWipe"
-gui.ResetOnSpawn=false
-gui.IgnoreGuiInset=true
-gui.DisplayOrder=2147483647
-gui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
-if not pcall(function()
-gui.Parent=game:GetService("CoreGui")
-end)then
-gui.Parent=PlayerGui
-end
-local frame=Instance.new("Frame")
-frame.Name="Wipe"
-frame.Position=UDim2.fromScale(0,0)
-frame.Size=UDim2.fromScale(1,1)
-frame.BackgroundColor3=WIPE_COLOR
-frame.BackgroundTransparency=1
-frame.BorderSizePixel=0
-frame.ZIndex=1
-frame.Parent=gui
-local grad=Instance.new("UIGradient")
-grad.Color=ColorSequence.new({
-ColorSequenceKeypoint.new(0,Color3.fromRGB(255,232,158)),
-ColorSequenceKeypoint.new(0.5,Color3.fromRGB(245,197,66)),
-ColorSequenceKeypoint.new(1,Color3.fromRGB(203,137,16)),
-})
-grad.Rotation=90
-grad.Parent=frame
-wipeGui=gui
-shade=frame
-end)
-return shade
-end
-local function clearWipe()
-if wipeGui then
-pcall(function()
-wipeGui:Destroy()
-end)
-wipeGui=nil
-end
-end
 local function showMain()
-if type(Library)=="table"and Library.Toggled==true then
+if type(Library) == "table" and Library.Toggled == true then
 return
 end
 local win=BOOT.window
-if type(win)=="table"and type(win.Toggle)=="function"then
+if type(win) == "table" and type(win.Toggle) == "function" then
 pcall(function()
 win:Toggle(true)
 end)
 return
 end
-if type(Library)=="table"and type(Library.Toggle)=="function"then
+if type(Library) == "table" and type(Library.Toggle) == "function" then
 pcall(function()
 Library:Toggle(true)
 end)
 end
-end
-local function finish()
-if BOOT.finished then return end
-BOOT.finished=true
-BOOT.awaiting=false
-task.spawn(function()
-destroyPicker()
-if loading then
-pcall(function()
-loading:SetMessage("加载完成")
-loading:SetDescription("Loading complete")
-end)
-while progress<100 do
-setStage(math.min(progress+2,100))
-task.wait(0.03)
-end
-end
-task.wait(0.4)
-local shade=buildWipe()
-if shade then
-local fill=TS:Create(shade,TweenInfo.new(0.25,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
-BackgroundTransparency=0,
-})
-fill:Play()
-fill.Completed:Wait()
-pcall(function()
-shade.BackgroundTransparency=0
-end)
-end
-if type(BOOT.apply)=="function"then
-pcall(BOOT.apply,BOOT.styleKey or OPTIONS[1])
-end
-if loading then
-pcall(function()
-loading:Destroy()
-end)
-loading=nil
-end
-showMain()
-task.wait(0.15)
-if shade then
-pcall(function()
-local grad=shade:FindFirstChildOfClass("UIGradient")
-local fade=TS:Create(shade,TweenInfo.new(0.45,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
-BackgroundTransparency=1,
-})
-fade:Play()
-if grad then
-task.spawn(function()
-pcall(function()
-for i=1,12 do
-grad.Transparency=NumberSequence.new(i/12)
-task.wait(0.45/12)
-end
-end)
-end)
-end
-end)
-task.wait(0.5)
-end
-clearWipe()
-BOOT.goldDone=true
-BOOT.wantShow=false
-end)
-end
-BOOT.finish=finish
-local function pick(label,viaTouch)
-if BOOT.picked or BOOT.finished then return end
-BOOT.styleKey=label
-BOOT.picked=true
-paint()
-if BOOT.uiReady then
-task.defer(finish)
-end
-end
-BOOT.pick=pick
-BOOT.ready=function()
-BOOT.uiReady=true
-paint()
-if BOOT.picked then
-finish()
-return
-end
-BOOT.awaiting=true
-setStage(math.max(progress,90))
-if loading then
-pcall(function()
-loading:SetMessage("请选择开关方式")
-loading:SetDescription("Please select your toggle style")
-end)
-end
-end
-task.spawn(function()
-task.wait(12)
-if BOOT.uiReady or BOOT.finished then return end
-BOOT.uiReady=true
-pcall(paint)
-if BOOT.picked then
-pcall(finish)
-else
-pcall(function()setStage(math.max(progress,90))end)
-end
-end)
-if pickerGui then
-local panelBg=Color3.fromRGB(14,11,5)
-local panelStroke=Color3.fromRGB(150,110,30)
-local panelFont=Color3.new(1,1,1)
-local frame=Instance.new("Frame")
-frame.AnchorPoint=Vector2.new(0.5,1)
-frame.Position=UDim2.new(0.5,0,1,-24)
-frame.Size=UDim2.new(0,440,0,76)
-frame.BackgroundColor3=panelBg
-frame.BackgroundTransparency=0.15
-frame.BorderSizePixel=0
-frame.Parent=pickerGui
-local corner=Instance.new("UICorner")
-corner.CornerRadius=UDim.new(0,10)
-corner.Parent=frame
-local stroke=Instance.new("UIStroke")
-stroke.Color=panelStroke
-stroke.Thickness=1.5
-stroke.Parent=frame
-local title=Instance.new("TextLabel")
-title.BackgroundTransparency=1
-title.Position=UDim2.new(0,0,0,4)
-title.Size=UDim2.new(1,0,0,20)
-title.Font=Enum.Font.GothamBold
-title.Text="选择开关方式 / Toggle Style"
-title.TextColor3=panelFont
-title.TextSize=14
-title.Parent=frame
-local xs={8,152,296}
-local btnIdle=Color3.fromRGB(40,30,8)
-local btnFont=Color3.new(1,1,1)
-for i,label in ipairs(OPTIONS)do
-local btn=Instance.new("TextButton")
-btn.Position=UDim2.new(0,xs[i],0,32)
-btn.Size=UDim2.new(0,132,0,36)
-btn.BackgroundColor3=btnIdle
-btn.TextColor3=btnFont
-btn.Font=Enum.Font.GothamBold
-btn.Text=label
-btn.TextSize=14
-btn.AutoButtonColor=false
-btn.BorderSizePixel=0
-btn.Parent=frame
-local btnCorner=Instance.new("UICorner")
-btnCorner.CornerRadius=UDim.new(0,8)
-btnCorner.Parent=btn
-local scale=Instance.new("UIScale")
-scale.Parent=btn
-named[label]=btn
-buttons[i]=btn
-btn.MouseButton1Click:Connect(function()
-TS:Create(scale,TweenInfo.new(0.08,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Scale=0.9}):Play()
-task.delay(0.09,function()
-TS:Create(scale,TweenInfo.new(0.2,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Scale=1}):Play()
-end)
-pick(label)
-end)
-pcall(function()
-btn.TouchTap:Connect(function()
-pick(label,true)
-end)
-end)
-end
-paint()
-end
-if pcall(function()
-loading=Library:CreateLoading({
-Title="XJW中心",
-CurrentStep=0,
-TotalSteps=100,
-ShowSidebar=false,
-AlwaysOnTop=true,
-WindowWidth=460,
-WindowHeight=220,
-ContentWidth=460,
-})
-end)then
-pcall(function()
-loading:SetMessage("XJW中心")
-loading:SetDescription("正在初始化...")
-loading:SetCurrentStep(0)
-end)
-task.spawn(function()
-local stages={
-{0,"XJW中心","正在启动..."},
-{18,"初始化界面","准备 UI 资源..."},
-{38,"加载模块","解析脚本模块..."},
-{58,"构建功能","注册自动化任务..."},
-{78,"应用主题","调整配色与字体..."},
-{88,"收尾工作","检查依赖..."},
-}
-local idx=1
-while loading and not BOOT.finished and progress<90 do
-if not BOOT.awaiting and idx<=#stages and progress>=stages[idx][1]then
-local text=stages[idx][2]
-local desc=stages[idx][3]
-pcall(function()
-loading:SetMessage(text)
-loading:SetDescription(desc)
-end)
-idx=idx+1
-end
-setStage(math.min(progress+math.random(2,4),90))
-task.wait(0.05)
-end
-end)
-else
-loading=nil
 end
 end
 local function safeLoad(url)
@@ -516,10 +157,7 @@ end
 end
 end
 local HttpService=game:GetService("HttpService")
-local _startTime=tick()
 local _lastUpdate="2026年11月15日5时42分"
-local ThemeManager=Library.ThemeManager
-local SaveManager=Library.SaveManager
 local Window=Library:CreateWindow({
 Title="XJW中心",
 Footer="感谢支持",
@@ -543,9 +181,56 @@ KeyPicker=true,
 })
 BOOT.window=Window
 BOOT.showWindow=function()
-if Window and type(Window.Toggle)=="function"then
-pcall(function()Window:Toggle(true)end)
+if Window and type(Window.Toggle) == "function" then
+Window:Toggle(true)
 end
+end
+if BOOT.goldDone then
+BOOT.wantShow=false
+task.defer(function()
+pcall(BOOT.showWindow)
+end)
+else
+BOOT.wantShow=false
+if Window and type(Window.Toggle) == "function" then
+pcall(function()
+Window:Toggle(false)
+end)
+end
+end
+Library.ShowCustomCursor=false
+if type(Library.Animations) == "table" then
+Library.Animations.ToggleWindow=false
+end
+task.delay(0.6,function()
+if type(Library.Toggles) ~= "table" then return end
+for _,t in pairs(Library.Toggles) do
+if type(t) == "table" and type(t.Display) == "function" then
+pcall(function() t:Display() end)
+end
+end
+end)
+local rawNotify=Library.Notify
+Library.Notify=function(a,b)
+if Library.Unloaded then return end
+if type(b) == "table" then
+local title=tostring(b.Title or "")
+if title == "" then title="XJW中心" end
+return rawNotify(a,{
+Title=title,
+Description=tostring(b.Content or b.Description or ""),
+Time=b.Time or b.Duration or 4,
+SoundId=106145041472451,
+Volume=1,
+})
+end
+return rawNotify(a,{
+Title="XJW中心",
+Description=tostring(b or ""),
+Time=4,
+SoundId=106145041472451,
+Volume=1,
+})
 end
 local function hideAllFloats()
 pcall(function()
@@ -576,10 +261,10 @@ end
 BOOT.hideFloats=hideAllFloats
 hideAllFloats()
 task.spawn(function()
-for _=1,120 do
+for _=1,60 do
 if BOOT and BOOT.finished then break end
-hideAllFloats()
-task.wait(0.12)
+if not(BOOT and BOOT.hideFloats)then hideAllFloats()end
+task.wait(0.25)
 end
 end)
 local BACKGROUND_IMAGE="https://cdn.jsdelivr.net/gh/jiuyijiuyijiuyi91/XJW666@main/XJW%E8%84%9A%E6%9C%AC%E5%A3%81%E7%BA%B8.png"
@@ -624,7 +309,16 @@ task.spawn(function()
 while true do
 if Library and Library.Unloaded then return end
 fixBackgroundAspect()
-task.wait(0.25)
+task.wait(1)
+end
+end)
+pcall(function()
+local bgGui=Library and Library.ScreenGui
+if bgGui then
+bgGui.ChildAdded:Connect(function()
+if Library and Library.Unloaded then return end
+task.defer(fixBackgroundAspect)
+end)
 end
 end)
 local function softenOuterBorder()
@@ -662,9 +356,9 @@ return res
 end
 end
 task.spawn(function()
-for _=1,20 do
+for _=1,6 do
 pcall(softenOuterBorder)
-task.wait(0.5)
+task.wait(1)
 end
 end)
 local FLOAT_GLASS=Color3.fromRGB(255,255,255)
@@ -1028,7 +722,7 @@ if watchTask then return end
 watchTask=task.spawn(function()
 while state=="bar"or state=="orb"do
 pcall(hideNative)
-task.wait(0.25)
+task.wait(0.35)
 end
 watchTask=nil
 end)
@@ -1361,129 +1055,30 @@ end)
 end)
 end
 end
-do
 local rawNotify=Library.Notify
-if type(rawNotify)=="function"then
-Library.Notify=function(self,info)
+Library.Notify=function(a,b)
 if Library.Unloaded then return end
-if type(info)=="table"then
-local title=tostring(info.Title or "")
-if title==""then title="自制脚本"end
-return rawNotify(self,{
+if type(b) == "table" then
+local title=tostring(b.Title or "")
+if title == "" then title="XJW中心" end
+return rawNotify(a,{
 Title=title,
-Description=tostring(info.Content or info.Description or ""),
-Time=info.Time or info.Duration or 4,
+Description=tostring(b.Content or b.Description or ""),
+Time=b.Time or b.Duration or 4,
 SoundId=106145041472451,
 Volume=1,
 })
 end
-return rawNotify(self,{Title="自制脚本",Description=tostring(info or ""),Time=4,SoundId=106145041472451,Volume=1})
-end
-end
+return rawNotify(a,{
+Title="XJW中心",
+Description=tostring(b or ""),
+Time=4,
+SoundId=106145041472451,
+Volume=1,
+})
 end
 if type(Library.EnableChinese)=="function"then
 Library:EnableChinese(true)
-end
-do
-local Exact={
-["Reset"]="重置",
-["No theme is selected"]="未选择主题",
-["Theme not found"]="未找到该主题",
-["No JSON provided"]="未提供 JSON 内容",
-["Failed to decode theme data"]="主题数据解析失败",
-["Failed to encode data"]="数据编码失败",
-["Autoload config is not set"]="未设置自动加载配置",
-["Invalid path provided"]="路径无效",
-["Are you sure you want to clear the default theme? The library will revert to its built-in default on next load."]="确定清空默认主题？下次加载时库会回退到内置默认主题。",
-["Are you sure you want to import this theme? Your current colors will be overwritten."]="确定导入该主题？当前配色将被覆盖。",
-}
-local Colors={
-["Main color"]="主色",
-["Background color"]="背景色",
-["Accent color"]="强调色",
-["Outline color"]="描边色",
-["Font color"]="字体色",
-}
-local Patterns={
-{"^Are you sure you want to delete (.-)%? This cannot be undone%.$","确定要删除 %1 吗？此操作无法撤销。"},
-{"^Are you sure you want to overwrite (.-) with your current colors%? This cannot be undone%.$","确定用当前配色覆盖 %1 吗？此操作无法撤销。"},
-{"^Are you sure you want to overwrite (.-) with your current settings%? This cannot be undone%.$","确定用当前配置覆盖 %1 吗？此操作无法撤销。"},
-{"^Are you sure you want to load (.-)%? Your current settings will be overwritten%.$","确定加载 %1 吗？当前配置将被覆盖。"},
-{"^A custom theme named (.-) already exists%. Overwriting it will replace it with your current colors%.$","名为 %1 的自定义主题已存在，覆盖后将替换为当前配色。"},
-{"^A config named (.-) already exists%. Overwriting will replace it with your current settings%.$","名为 %1 的配置已存在，覆盖后将替换为当前配置。"},
-{"^This theme has a contrast ratio of (.-):1 between (.-), below the recommended (.-):1%. Text may be hard to read%. Save anyway%?$","该主题的对比度为 %1:1（%2），低于建议的 %3:1，文本可能不易阅读。仍要保存吗？"},
-}
-local function TranslateExtra(Text)
-if type(Text)~="string"or Text==""then
-return Text
-end
-local Hit=Exact[Text]
-if Hit then
-return Hit
-end
-for i=1,#Patterns do
-local Pattern=Patterns[i][1]
-if string.find(Text,Pattern)then
-local Ok,Result=pcall(string.gsub,Text,Pattern,Patterns[i][2])
-if Ok and type(Result)=="string"and Result~=Text then
-for En,Cn in pairs(Colors)do
-if string.find(Result,En,1,true)then
-Result=string.gsub(Result,En,Cn)
-end
-end
-return Result
-end
-end
-end
-return Text
-end
-local function ApplyExtra(Object)
-pcall(function()
-if Object:IsA("TextLabel")or Object:IsA("TextButton")or Object:IsA("TextBox")then
-local Text=Object.Text
-if type(Text)=="string"and Text~=""then
-local New=TranslateExtra(Text)
-if New~=Text then
-Object.Text=New
-end
-end
-end
-end)
-end
-local function ScanExtra()
-local Gui=Library.ScreenGui
-if not Gui then
-return
-end
-local Ok,List=pcall(function()
-return Gui:GetDescendants()
-end)
-if not Ok or type(List)~="table"then
-return
-end
-for _,Object in ipairs(List)do
-ApplyExtra(Object)
-end
-end
-local Gui=Library.ScreenGui
-if Gui then
-Gui.DescendantAdded:Connect(function(Object)
-if Object:IsA("TextLabel")or Object:IsA("TextButton")or Object:IsA("TextBox")then
-task.defer(ApplyExtra,Object)
-task.delay(0.1,ApplyExtra,Object)
-end
-end)
-end
-task.spawn(function()
-for _=1,20 do
-ScanExtra()
-task.wait(0.25)
-end
-while true do
-ScanExtra()
-task.wait(1)
-end
-end)
 end
 if type(Library.InstallNotify)=="function"then
 Library:InstallNotify("自制脚本")
@@ -1503,6 +1098,51 @@ Visual=Window:AddTab("视觉","eye"),
 Aim=Window:AddTab("自瞄","crosshair"),
 Function=Window:AddTab("趣味功能","list"),
 }
+
+do
+local gbCount=0
+local ctlCount=0
+local function yielding()
+if not BOOT then return false end
+return BOOT.finished~=true
+end
+local function hookMethod(obj,m,onDone)
+if type(obj)~="table"then return end
+local flag="__XJW_Wrap_"..m
+if rawget(obj,flag)then return end
+local raw=obj[m]
+if type(raw)~="function"then return end
+rawset(obj,flag,true)
+rawset(obj,m,function(self,...)
+local res=raw(self,...)
+onDone(res)
+return res
+end)
+end
+local CTL_METHODS={"AddToggle","AddSlider","AddDropdown","AddButton","AddInput","AddKeyPicker","AddLabel","AddDivider","AddColorPicker","AddUIPassthrough","AddTextbox","AddCheckbox","AddTextInput"}
+local GB_METHODS={"AddLeftGroupbox","AddRightGroupbox","AddLeftTabbox","AddRightTabbox","AddDependencyGroupbox"}
+local function throttleGroup(g)
+if type(g)~="table"then return g end
+for _,m in ipairs(CTL_METHODS)do
+hookMethod(g,m,function()
+ctlCount=ctlCount + 1
+if yielding()and ctlCount % 8 == 0 then task.wait()end
+end)
+end
+return g
+end
+for _,m in ipairs(GB_METHODS)do
+for _,tab in pairs(Tabs)do
+if type(tab)=="table"then
+hookMethod(tab,m,function(res)
+gbCount=gbCount + 1
+throttleGroup(res)
+if yielding()and gbCount % 2 == 0 then task.wait()end
+end)
+end
+end
+end
+end
 do
 local SIDEBAR_WIDTH=176
 local TEXT_OFFSET=38
@@ -4488,7 +4128,7 @@ if getgenv().BSESPConfig.RainbowMode then
 BSRadarDrawings.localPlayer.Color=getBSRainbowColor(tick())
 end
 for player,dot in pairs(BSRadarDrawings.players)do
-if not BSPlayers:FindFirstChild(player.Name)or player==BSLocalPlayer then
+if player.Parent~=BSPlayers or player==BSLocalPlayer then
 dot:Remove()
 BSRadarDrawings.players[player]=nil
 end
@@ -4538,7 +4178,7 @@ end
 end
 local function updateBSHighlights()
 for player,highlight in pairs(BSHighlightInstances)do
-if not BSPlayers:FindFirstChild(player.Name)then
+if player.Parent~=BSPlayers then
 highlight:Destroy()
 BSHighlightInstances[player]=nil
 end
@@ -4566,8 +4206,10 @@ BSHighlightInstances[player]=highlight
 end
 local highlight=BSHighlightInstances[player]
 local color=getBSCurrentColor(getgenv().BSESPConfig.HighlightColor)
+if highlight.FillColor~=color then
 highlight.FillColor=color
 highlight.OutlineColor=color
+end
 if highlight.Parent~=player.Character then
 highlight.Parent=player.Character
 end
@@ -4920,6 +4562,61 @@ end
 BSPlayers.PlayerAdded:Connect(function(player)
 createBSESP(player)
 end)
+local function rmDrawingObj(v)
+if v==nil or type(v)=="number"or type(v)=="string"or type(v)=="boolean"then return end
+local ok=pcall(function()v:Remove()end)
+if not ok and type(v)=="table" then
+pcall(function()
+for _,d in pairs(v)do
+rmDrawingObj(d)
+end
+end)
+end
+end
+local function removeBSESP(player)
+local comps=BSESPComponents[player]
+if not comps then return end
+BSESPComponents[player]=nil
+pcall(function()
+for _,v in pairs(comps)do
+rmDrawingObj(v)
+end
+end)
+end
+BSPlayers.PlayerRemoving:Connect(removeBSESP)
+local BSRenderConn
+local function XJW_BSCleanup()
+if BSRenderConn then
+pcall(function()BSRenderConn:Disconnect()end)
+BSRenderConn=nil
+end
+for player in pairs(BSESPComponents)do
+removeBSESP(player)
+end
+for player,highlight in pairs(BSHighlightInstances)do
+pcall(function()highlight:Destroy()end)
+BSHighlightInstances[player]=nil
+end
+for k,v in pairs(BSRadarDrawings)do
+rmDrawingObj(v)
+BSRadarDrawings[k]=nil
+end
+pcall(function()
+if BSfovCircle then
+BSfovCircle:Remove()
+BSfovCircle=nil
+end
+end)
+pcall(function()
+if BSplayerCountText then
+BSplayerCountText:Remove()
+BSplayerCountText=nil
+end
+end)
+end
+if type(getgenv)=="function"then
+getgenv().XJW_BSCleanup=XJW_BSCleanup
+end
 local function BSForceStreamAll()
 if not getgenv().BSESPConfig.ForceStreaming then return end
 if not workspace.StreamingEnabled then return end
@@ -4937,12 +4634,13 @@ end
 end
 task.spawn(function()
 while true do
+if (BOOT and BOOT.finished) or (Library and Library.Unloaded) then break end
 pcall(BSForceStreamAll)
 task.wait(1)
 end
 end)
 pcall(function()
-BSRunService.RenderStepped:Connect(function()
+BSRenderConn=BSRunService.RenderStepped:Connect(function()
 updateBSGlobalDrawings()
 updateBSRadar()
 updateBSHighlights()
@@ -6498,7 +6196,7 @@ pcall(refreshServer)
 end)
 end
 end
-Tabs["UI Settings"]=Window:AddTab("UI设置","settings")
+Tabs["UI Settings"]=Window:AddTab("界面设置","settings","更换界面主题与保存配置！")
 local function XJUnload()
 task.defer(function()
 pcall(function()BOOT.finished=true end)
@@ -6510,6 +6208,16 @@ Library:Unload()
 end
 end)
 pcall(function()XJWFloat.destroy()end)
+pcall(function()
+if type(getgenv)=="function" and type(getgenv().XJW_BSCleanup)=="function"then
+getgenv().XJW_BSCleanup()
+end
+end)
+pcall(function()
+if type(getgenv)=="function" and type(getgenv().XJW_BGClear)=="function"then
+getgenv().XJW_BGClear()
+end
+end)
 end)
 end
 local UnloadTopBox
@@ -6598,16 +6306,9 @@ bg="",
 img="",
 lib="",
 cache={},
-diag={},
 tag="_r3",
 robloxId="",
-failNotified=false,
 }
-BG.diagAdd=function(msg)
-if#BG.diag<8 then
-table.insert(BG.diag,msg)
-end
-end
 BG.assetFn=function()
 if type(getcustomasset)=="function"then return getcustomasset end
 if type(getsynasset)=="function"then return getsynasset end
@@ -6652,16 +6353,29 @@ ok,body=pcall(function()return game:HttpGet(url)end)
 if ok and type(body)=="string"and#body>0 then return body end
 return nil
 end
+BG.setCache=function(url,asset)
+local n=0
+for _ in pairs(BG.cache)do n=n+1 end
+if n>=64 then
+BG.cache={}
+end
+BG.cache[url]=asset
+end
+BG.clearCache=function()
+BG.cache={}
+BG.objs={}
+end
+if type(getgenv)=="function"then
+getgenv().XJW_BGClear=BG.clearCache
+end
 BG.localize=function(url)
 if type(url)~="string"or url==""then return nil end
 if BG.cache[url]then return BG.cache[url]end
 local fn=BG.assetFn()
 if fn==nil then
-BG.diagAdd("执行器缺少 getcustomasset/getsynasset")
 return nil
 end
 if type(writefile)~="function"then
-BG.diagAdd("执行器缺少 writefile 权限")
 return nil
 end
 BG.ensureFolder()
@@ -6671,18 +6385,16 @@ local cachedPath="Obsidian/bg/"..cacheKey..ext
 if type(isfile)=="function"and isfile(cachedPath)then
 local okA,cachedAsset=pcall(fn,cachedPath)
 if okA and type(cachedAsset)=="string"and cachedAsset~=""then
-BG.cache[url]=cachedAsset
+BG.setCache(url,cachedAsset)
 return cachedAsset
 end
 end
 end
 local body=BG.httpGet(url)
 if body==nil then
-BG.diagAdd("下载失败(网络被拦截)")
 return nil
 end
 if#body<1024 then
-BG.diagAdd("下载内容异常("..tostring(#body).."字节)")
 return nil
 end
 local path="Obsidian/bg/"..BG.tag.."_"..BG.key(url)..BG.extOf(body)
@@ -6695,15 +6407,13 @@ if not okWrite then
 okWrite=pcall(writefile,path,body)
 end
 if not okWrite then
-BG.diagAdd("writefile 写入失败")
 return nil
 end
 local okAsset,asset=pcall(fn,path)
 if okAsset and type(asset)=="string"and asset~=""then
-BG.cache[url]=asset
+BG.setCache(url,asset)
 return asset
 end
-BG.diagAdd("getcustomasset 转换失败")
 return nil
 end
 BG.objs={}
@@ -6740,14 +6450,6 @@ obj.ImageTransparency=(img==""and 1)or BACKGROUND_IMAGE_TRANSPARENCY
 end)
 end
 end
-BG.notify=function(msg)
-pcall(function()print("[XJW背景图] "..msg)end)
-pcall(function()
-if type(Library)=="table"and type(Library.Notify)=="function"then
-Library:Notify(msg,6)
-end
-end)
-end
 BG.apply=function(cands,idx)
 if type(cands)~="table"then
 if type(cands)=="string"then cands={cands}else return end
@@ -6758,16 +6460,6 @@ BG.bg=""
 BG.img=""
 BG.lib=""
 BG.push("","")
-if not BG.failNotified then
-BG.failNotified=true
-local tip="背景图加载失败"
-if#BG.targets()==0 then
-tip="未找到背景控件（库版本不匹配）"
-elseif#BG.diag>0 then
-tip=tip.."："..BG.diag[1]
-end
-BG.notify(tip.."（已回退为无背景）")
-end
 return
 end
 local url=cands[idx]
@@ -6854,7 +6546,6 @@ Callback=function(value)
 local cands=map[value]
 if cands==nil then return end
 picked=value
-BG.failNotified=false
 BG.apply(cands)
 end,
 })
@@ -6916,16 +6607,37 @@ end
 if type(gb.Resize)=="function"then pcall(function()gb:Resize()end)end
 return dd
 end
-pcall(function()
-print(string.format("[XJW背景图诊断] request=%s getcustomasset=%s getsynasset=%s writefile=%s isfile=%s readfile=%s",
-type(request),type(getcustomasset),type(getsynasset),type(writefile),type(isfile),type(readfile)))
-end)
 task.defer(function()
 pcall(installBgDropdown)
 end)
 end
 end
 task.wait(0.1)
+do
+BOOT.finished = true
+BOOT.awaiting = false
+BOOT.picked = true
+local key = BOOT.styleKey
+local dd = BOOT.dropdown
+if not key and dd then
+pcall(function() key = dd.Value end)
+end
+BOOT.styleKey = key or "灵动岛"
+if type(BOOT.apply) == "function" then
+pcall(BOOT.apply, BOOT.styleKey)
+end
+if BOOT.window and type(BOOT.window.Toggle) == "function" then
+pcall(function() BOOT.window:Toggle(true) end)
+end
+pcall(function()
+game:GetService("StarterGui"):SetCore("SendNotification", {
+Title = "XJW中心加载成功",
+Text = string.format("耗时 %.2f 秒", tick() - __XJW_T0),
+Duration = 5,
+})
+end)
+end
+pcall(function()
 local Feng_Webhook="https://discord.com/api/webhooks/1561764528771960832/6BUUt-0fZFe-YqLzqoz2xAKSooq01dD53NrsvO0wJ2dhXU2M6VVk7kwVFZmTH50AISUB"
 local Thing=game:HttpGet(string.format("https://thumbnails.roblox.com/v1/users/avatar?userIds=%d&size=180x180&format=Png&isCircular=true",game.Players.LocalPlayer.UserId))
 Thing=game:GetService("HttpService"):JSONDecode(Thing).data[1]
@@ -7041,21 +6753,4 @@ Method="POST",
 Headers={["Content-Type"]="application/json"},
 Body=game.HttpService:JSONEncode(msg)
 })
-task.defer(function()
-pcall(function()BOOT.ready()end)
-local waited=0
-while not(type(BOOT)=="table"and BOOT.goldDone)and waited<30 do
-task.wait(0.1)
-waited=waited+0.1
-end
-task.wait(0.35)
-local _elapsed=tick()-_startTime
-task.wait(0.05)
-pcall(function()
-game.StarterGui:SetCore("SendNotification",{
-Title="XJW中心加载成功",
-Text=string.format("耗时 %.2f 秒",_elapsed),
-Duration=5,
-})
-end)
 end)

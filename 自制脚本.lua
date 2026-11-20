@@ -1,45 +1,1011 @@
-local __XJW_T0=tick()
+local __XJW_BOOT
+local __XJW_DIAG = {}
+do
+	local __bootOk = pcall(function()
+		local TweenService = game:GetService("TweenService")
+		local RunService = game:GetService("RunService")
+		local Players = game:GetService("Players")
+		local LP = Players.LocalPlayer
+		local PG
+		local pgOk, pgAlt = pcall(function()
+			return LP:FindFirstChildOfClass("PlayerGui")
+		end)
+		if pgOk and typeof(pgAlt) == "Instance" then
+			PG = pgAlt
+		end
+		if not PG then
+			local cgOk, cg = pcall(function()
+				return game:GetService("CoreGui")
+			end)
+			if cgOk and typeof(cg) == "Instance" then
+				PG = cg
+			end
+		end
+		if not PG then
+			PG = LP:FindFirstChildOfClass("PlayerGui") or LP:WaitForChild("PlayerGui", 10)
+		end
+		if not PG then
+			error("no gui parent")
+		end
+		pcall(function()
+			local oldGui = PG:FindFirstChild("XJWCenterBoot")
+			if oldGui and oldGui:IsA("ScreenGui") then
+				oldGui:Destroy()
+			end
+		end)
+		local CAM = workspace.CurrentCamera
+		local UD = UDim2
+		local C = {
+			Void = Color3.fromRGB(4, 7, 14), Bg = Color3.fromRGB(11, 16, 28),
+			Panel = Color3.fromRGB(16, 23, 40), Panel2 = Color3.fromRGB(24, 33, 56),
+			Line = Color3.fromRGB(38, 56, 88),
+			Cyan = Color3.fromRGB(0, 229, 255), Purple = Color3.fromRGB(123, 97, 255),
+			Green = Color3.fromRGB(0, 255, 170), Red = Color3.fromRGB(255, 70, 90),
+			Text = Color3.fromRGB(222, 240, 255), Dim = Color3.fromRGB(110, 140, 180),
+		}
+		local function new(c, p)
+			local i = Instance.new(c)
+			local pt
+			for k, v in pairs(p or {}) do
+				if k == "Parent" then
+					pt = v
+				else
+					local okSet = pcall(function()
+						i[k] = v
+					end)
+					if not okSet then
+						__XJW_DIAG[#__XJW_DIAG + 1] = tostring(c) .. "." .. tostring(k)
+					end
+				end
+			end
+			if pt then
+				local okP = pcall(function()
+					i.Parent = pt
+				end)
+				if not okP then
+					__XJW_DIAG[#__XJW_DIAG + 1] = "parent:" .. tostring(c)
+				end
+			end
+			return i
+		end
+		local function corner(p, r)
+			return new("UICorner", { CornerRadius = UD.new(0, r), Parent = p })
+		end
+		local function stroke(p, c, t, tr)
+			return new("UIStroke", {
+				Color = c, Thickness = t or 1, Transparency = tr or 0,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = p,
+			})
+		end
+		local function grad(p, a, b, r)
+			return new("UIGradient", { Color = ColorSequence.new(a, b), Rotation = r or 0, Parent = p })
+		end
+		local function tw(i, d, p, s, dr)
+			local t = TweenService:Create(i, TweenInfo.new(d, s or Enum.EasingStyle.Quad, dr or Enum.EasingDirection.Out), p)
+			t:Play()
+			return t
+		end
+		local function hex(n)
+			local s = ""
+			for _ = 1, n do
+				s = s .. string.format("%X", math.random(0, 15))
+			end
+			return s
+		end
+		local function makeAlpha(root)
+			local d = {}
+			local function col(x)
+				local pr
+				if x:IsA("TextLabel") or x:IsA("TextButton") or x:IsA("TextBox") then
+					pr = "TextTransparency"
+				elseif x:IsA("ImageLabel") or x:IsA("ImageButton") then
+					pr = "ImageTransparency"
+				elseif x:IsA("Frame") then
+					pr = "BackgroundTransparency"
+				elseif x:IsA("UIStroke") then
+					pr = "Transparency"
+				end
+				if pr then
+					d[#d + 1] = { i = x, p = pr, b = x[pr] }
+				end
+			end
+			col(root)
+			for _, x in ipairs(root:GetDescendants()) do
+				col(x)
+			end
+			local a = {}
+			function a.set(t)
+				for _, r in ipairs(d) do
+					r.i[r.p] = r.b + (1 - r.b) * t
+				end
+			end
+			function a.tweenTo(t, du)
+				for _, r in ipairs(d) do
+					tw(r.i, du, { [r.p] = r.b + (1 - r.b) * t })
+				end
+			end
+			return a
+		end
+		local function techCorners(parent, color, len, thick, trans)
+			for _, s in ipairs({
+				{ 0, 0, len, thick }, { 0, 0, thick, len }, { 1, 0, len, thick }, { 1, 0, thick, len },
+				{ 0, 1, len, thick }, { 0, 1, thick, len }, { 1, 1, len, thick }, { 1, 1, thick, len },
+			}) do
+				new("Frame", {
+					AnchorPoint = Vector2.new(s[1], s[2]), Position = UD.new(s[1], 0, s[2], 0),
+					Size = UD.fromOffset(s[3], s[4]), BackgroundColor3 = color,
+					BackgroundTransparency = trans or 0, BorderSizePixel = 0, Parent = parent,
+				})
+			end
+		end
+		local function diamond(parent, x, y, sz, color, trans)
+			local d = new("Frame", {
+				Position = UD.fromOffset(x, y), Size = UD.fromOffset(sz, sz),
+				BackgroundColor3 = color, BackgroundTransparency = trans or 0,
+				BorderSizePixel = 0, Rotation = 45, Parent = parent,
+			})
+			corner(d, 2)
+			return d
+		end
+		local function fitScale(g, bw, pd, mn)
+			local s = g:FindFirstChildOfClass("UIScale") or new("UIScale", { Scale = 1, Parent = g })
+			local function u()
+				pcall(function()
+					s.Scale = math.clamp((CAM.ViewportSize.X - (pd or 40)) / bw, mn or .6, 1)
+				end)
+			end
+			u()
+			if CAM then
+				CAM:GetPropertyChangedSignal("ViewportSize"):Connect(u)
+			end
+			return s
+		end
+		local function ucut(s, n)
+			s = tostring(s or "")
+			local ok1, l = pcall(function()
+				return utf8.len(s)
+			end)
+			if ok1 and l and l > n then
+				local ok2, pos = pcall(function()
+					return utf8.offset(s, n + 1)
+				end)
+				if ok2 and pos then
+					return s:sub(1, pos - 1) .. "..."
+				end
+			end
+			return s
+		end
+
+		local gui = new("ScreenGui", {
+			Name = "XJWCenterBoot", ResetOnSpawn = false, IgnoreGuiInset = true,
+			ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 999999, Parent = PG,
+		})
+
+		if not gui.Parent then
+			local altG
+			pcall(function()
+				altG = LP:FindFirstChildOfClass("PlayerGui") or LP:WaitForChild("PlayerGui", 10)
+			end)
+			if altG then
+				pcall(function()
+					gui.Parent = altG
+				end)
+			end
+		end
+		if not gui.Parent then
+			error("boot gui parent failed")
+		end
+
+		local function raiseTop()
+			pcall(function()
+				local mx = 0
+				local function scanP(p)
+					if not p then
+						return
+					end
+					for _, ch in ipairs(p:GetChildren()) do
+						if ch ~= gui and ch:IsA("ScreenGui") then
+							local d = ch.DisplayOrder
+							if d > mx then
+								mx = d
+							end
+						end
+					end
+				end
+				scanP(gui.Parent)
+				pcall(function()
+					scanP(game:GetService("CoreGui"))
+				end)
+				gui.DisplayOrder = mx + 50
+			end)
+		end
+
+		local mask = new("Frame", {
+			Size = UD.fromScale(1, 1), BackgroundColor3 = C.Void,
+			BackgroundTransparency = 1, BorderSizePixel = 0, Parent = gui,
+		})
+
+		local backdrop = new("Frame", { Size = UD.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = gui })
+		for i = 1, 14 do
+			new("Frame", {
+				Position = UD.new(i / 15, 0, 0, 0), Size = UD.new(0, 1, 1, 0),
+				BackgroundColor3 = C.Line, BackgroundTransparency = 0.93, BorderSizePixel = 0, Parent = backdrop,
+			})
+		end
+		for i = 1, 10 do
+			new("Frame", {
+				Position = UD.new(0, 0, i / 11, 0), Size = UD.new(1, 0, 0, 1),
+				BackgroundColor3 = C.Line, BackgroundTransparency = 0.93, BorderSizePixel = 0, Parent = backdrop,
+			})
+		end
+		local glow = new("Frame", {
+			AnchorPoint = Vector2.new(.5, .5), Position = UD.fromScale(.5, .5),
+			Size = UD.fromOffset(700, 700), BackgroundColor3 = C.Cyan,
+			BackgroundTransparency = 0.96, BorderSizePixel = 0, Parent = backdrop,
+		})
+		corner(glow, 350)
+		grad(glow, C.Cyan, C.Purple, 45)
+		local scan = new("Frame", {
+			Size = UD.new(1, 0, 0, 1), Position = UD.new(0, 0, 0, -0.02),
+			BackgroundColor3 = C.Cyan, BackgroundTransparency = 0.55, BorderSizePixel = 0, Parent = backdrop,
+		})
+
+		local PK
+		do
+			local root = new("Frame", {
+				AnchorPoint = Vector2.new(.5, .5), Position = UD.fromScale(.5, .5),
+				Size = UD.fromOffset(340, 140), BackgroundColor3 = C.Bg,
+				BorderSizePixel = 0, Visible = false, Parent = gui,
+			})
+			corner(root, 6)
+			local rootStroke = stroke(root, C.Cyan, 1, 0.4)
+			techCorners(root, C.Cyan, 14, 2, 0.1)
+			local scale = fitScale(root, 340, 40, 0.65)
+
+			local header = new("Frame", {
+				Size = UD.new(1, 0, 0, 26), BackgroundColor3 = C.Panel,
+				BorderSizePixel = 0, Parent = root,
+			})
+			corner(header, 6)
+			new("Frame", {
+				Position = UD.new(0, 0, 0, 20), Size = UD.new(1, 0, 0, 6),
+				BackgroundColor3 = C.Panel, BorderSizePixel = 0, Parent = root,
+			})
+			diamond(header, 10, 8, 10, C.Cyan, 0)
+			new("TextLabel", {
+				Position = UD.fromOffset(26, 0), Size = UD.new(1, -90, 1, 0), BackgroundTransparency = 1,
+				Text = "XJW  中心  //  BUILDING", TextColor3 = C.Text, Font = Enum.Font.GothamBold,
+				TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = header,
+			})
+			new("TextLabel", {
+				Position = UD.new(1, -70, 0, 0), Size = UD.fromOffset(62, 26), BackgroundTransparency = 1,
+				Text = "SECURE", TextColor3 = C.Green, Font = Enum.Font.Code, TextSize = 9,
+				TextXAlignment = Enum.TextXAlignment.Right, Parent = header,
+			})
+			new("Frame", {
+				Position = UD.new(0, 0, 0, 26), Size = UD.new(1, 0, 0, 1),
+				BackgroundColor3 = C.Line, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = root,
+			})
+
+			local pArea = new("Frame", {
+				Position = UD.fromOffset(12, 36), Size = UD.fromOffset(96, 94),
+				BackgroundColor3 = C.Panel, BorderSizePixel = 0, Parent = root,
+			})
+			corner(pArea, 5)
+			stroke(pArea, C.Line, 1, 0.5)
+
+			local avBox = new("Frame", {
+				AnchorPoint = Vector2.new(.5, 0), Position = UD.new(.5, 0, 0, 8),
+				Size = UD.fromOffset(48, 48), BackgroundTransparency = 1, Parent = pArea,
+			})
+			local avRing = new("Frame", {
+				AnchorPoint = Vector2.new(.5, .5), Position = UD.fromScale(.5, .5),
+				Size = UD.fromOffset(48, 48), BackgroundTransparency = 1, Parent = avBox,
+			})
+			corner(avRing, 24)
+			stroke(avRing, C.Cyan, 1.2, 0.3)
+			local avImg = new("ImageLabel", {
+				AnchorPoint = Vector2.new(.5, .5), Position = UD.fromScale(.5, .5),
+				Size = UD.fromOffset(40, 40), BackgroundColor3 = C.Panel2,
+				BorderSizePixel = 0, Image = "", Parent = avBox,
+			})
+			corner(avImg, 20)
+			stroke(avImg, C.Line, 1, 0.3)
+
+			local pNameLbl = new("TextLabel", {
+				Position = UD.fromOffset(4, 60), Size = UD.new(1, -8, 0, 12), BackgroundTransparency = 1,
+				Text = LP.Name, TextColor3 = C.Text, Font = Enum.Font.GothamBold,
+				TextSize = 9, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pArea,
+			})
+			local uidLbl = new("TextLabel", {
+				Position = UD.fromOffset(4, 74), Size = UD.new(1, -8, 0, 10), BackgroundTransparency = 1,
+				Text = "UID " .. tostring(LP.UserId), TextColor3 = C.Dim, Font = Enum.Font.Code,
+				TextSize = 8, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pArea,
+			})
+
+			local lArea = new("Frame", {
+				Position = UD.fromOffset(116, 36), Size = UD.fromOffset(212, 94),
+				BackgroundColor3 = C.Panel, BorderSizePixel = 0, Parent = root,
+			})
+			corner(lArea, 5)
+			stroke(lArea, C.Line, 1, 0.5)
+
+			local spinBox = new("Frame", {
+				Position = UD.fromOffset(10, 22), Size = UD.fromOffset(38, 38),
+				BackgroundTransparency = 1, Parent = lArea,
+			})
+			local spinOut = new("Frame", {
+				AnchorPoint = Vector2.new(.5, .5), Position = UD.fromScale(.5, .5),
+				Size = UD.fromOffset(38, 38), BackgroundTransparency = 1, Parent = spinBox,
+			})
+			corner(spinOut, 19)
+			stroke(spinOut, C.Cyan, 1.4, 0.3)
+			local spinOutDot = new("Frame", {
+				AnchorPoint = Vector2.new(.5, .5), Position = UD.new(1, 0, .5, 0),
+				Size = UD.fromOffset(5, 5), BackgroundColor3 = C.Cyan, BorderSizePixel = 0, Parent = spinOut,
+			})
+			corner(spinOutDot, 2.5)
+			local spinMid = new("Frame", {
+				AnchorPoint = Vector2.new(.5, .5), Position = UD.fromScale(.5, .5),
+				Size = UD.fromOffset(24, 24), BackgroundTransparency = 1, Parent = spinBox,
+			})
+			corner(spinMid, 12)
+			stroke(spinMid, C.Purple, 1.2, 0.4)
+			local spinCore = diamond(spinBox, 13, 13, 12, C.Cyan, 0)
+			grad(spinCore, C.Cyan, C.Purple, 45)
+
+			local titleLbl = new("TextLabel", {
+				Position = UD.fromOffset(58, 8), Size = UD.new(1, -68, 0, 14), BackgroundTransparency = 1,
+				Text = "正在构造功能...", TextColor3 = C.Text, Font = Enum.Font.GothamBold,
+				TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd, Parent = lArea,
+			})
+			local subLbl = new("TextLabel", {
+				Position = UD.fromOffset(58, 24), Size = UD.new(1, -68, 0, 11), BackgroundTransparency = 1,
+				Text = "BUILD  CORE", TextColor3 = C.Dim, Font = Enum.Font.Code,
+				TextSize = 9, TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd, Parent = lArea,
+			})
+			local pctLbl = new("TextLabel", {
+				Position = UD.fromOffset(58, 38), Size = UD.new(1, -68, 0, 16), BackgroundTransparency = 1,
+				Text = "  0%", TextColor3 = C.Cyan, Font = Enum.Font.Code,
+				TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, Parent = lArea,
+			})
+			local barBg = new("Frame", {
+				Position = UD.fromOffset(58, 62), Size = UD.new(1, -68, 0, 5),
+				BackgroundColor3 = C.Panel2, BorderSizePixel = 0, Parent = lArea,
+			})
+			corner(barBg, 3)
+			local barFill = new("Frame", { Size = UD.new(0, 0, 1, 0), BackgroundColor3 = C.Cyan, BorderSizePixel = 0, Parent = barBg })
+			corner(barFill, 3)
+			grad(barFill, C.Cyan, C.Purple, 0)
+
+			local streamLbl = new("TextLabel", {
+				Position = UD.fromOffset(58, 74), Size = UD.new(1, -68, 0, 11), BackgroundTransparency = 1,
+				Text = ">> 0000 0000 0000", TextColor3 = C.Dim, Font = Enum.Font.Code,
+				TextSize = 8, TextXAlignment = Enum.TextXAlignment.Left, Parent = lArea,
+			})
+
+			PK = {
+				root = root, scale = scale, stroke = rootStroke,
+				title = titleLbl, sub = subLbl, pct = pctLbl, fill = barFill, stream = streamLbl,
+				spinOut = spinOut, spinOutDot = spinOutDot, spinMid = spinMid, spinCore = spinCore,
+			}
+
+			task.spawn(function()
+				local ok, th = pcall(function()
+					return Players:GetUserThumbnailAsync(LP.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+				end)
+				if ok and th and avImg.Parent then
+					avImg.Image = th
+				end
+			end)
+		end
+
+		local OK = new("Frame", {
+			AnchorPoint = Vector2.new(.5, .5), Position = UD.fromScale(.5, .5),
+			Size = UD.fromOffset(220, 84), BackgroundColor3 = C.Bg,
+			BorderSizePixel = 0, Visible = false, Parent = gui,
+		})
+		corner(OK, 6)
+		stroke(OK, C.Green, 1, 0.35)
+		techCorners(OK, C.Green, 12, 2, 0.15)
+		local okScale = fitScale(OK, 220, 40, 0.7)
+
+		local pulseOuter = new("Frame", {
+			AnchorPoint = Vector2.new(.5, .5), Position = UD.fromOffset(46, 42),
+			Size = UD.fromOffset(42, 42), BackgroundTransparency = 1, Parent = OK,
+		})
+		corner(pulseOuter, 21)
+		stroke(pulseOuter, C.Green, 1.2, 0.7)
+
+		local checkBox = new("Frame", {
+			AnchorPoint = Vector2.new(.5, .5), Position = UD.fromOffset(46, 42),
+			Size = UD.fromOffset(22, 22), BackgroundTransparency = 1, Parent = OK,
+		})
+		local cb1 = new("Frame", {
+			AnchorPoint = Vector2.new(.5, .5), Position = UD.fromOffset(7, 12),
+			Size = UD.fromOffset(9, 2.5), Rotation = 45, BackgroundColor3 = C.Green,
+			BorderSizePixel = 0, Parent = checkBox,
+		})
+		corner(cb1, 1.5)
+		local cb2 = new("Frame", {
+			AnchorPoint = Vector2.new(.5, .5), Position = UD.fromOffset(14, 9),
+			Size = UD.fromOffset(15, 2.5), Rotation = -48, BackgroundColor3 = C.Green,
+			BorderSizePixel = 0, Parent = checkBox,
+		})
+		corner(cb2, 1.5)
+
+		new("TextLabel", {
+			Position = UD.fromOffset(80, 26), Size = UD.new(1, -90, 0, 16), BackgroundTransparency = 1,
+			Text = "脚本已加载成功", TextColor3 = C.Text, Font = Enum.Font.GothamBold,
+			TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = OK,
+		})
+		new("TextLabel", {
+			Position = UD.fromOffset(80, 44), Size = UD.new(1, -90, 0, 12), BackgroundTransparency = 1,
+			Text = "SYSTEM  READY", TextColor3 = C.Green, Font = Enum.Font.Code,
+			TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = OK,
+		})
+
+		local aB = makeAlpha(backdrop)
+		local aO = makeAlpha(OK)
+
+		local st = { pct = 0, target = 0, creepCap = 8, shown = false, done = false, fired = false, conns = {} }
+		local a1, a2, accH = 0, 0, 0
+
+		local function fireCB(cb)
+			if st.fired or type(cb) ~= "function" then
+				return
+			end
+			st.fired = true
+			pcall(cb)
+		end
+
+		local api = {}
+
+		function api.show()
+			if st.shown or st.done then
+				return
+			end
+			st.shown = true
+			raiseTop()
+			PK.root.Visible = true
+			PK.scale.Scale = 0.9
+			tw(PK.scale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+			st.conns[#st.conns + 1] = RunService.RenderStepped:Connect(function(dt)
+				a1 = a1 + dt * 300
+				a2 = a2 - dt * 200
+				PK.spinOut.Rotation = a1
+				PK.spinMid.Rotation = a2
+			end)
+			st.conns[#st.conns + 1] = RunService.RenderStepped:Connect(function(dt)
+				accH = accH + dt
+				if accH > 0.09 then
+					accH = 0
+					PK.stream.Text = ">> " .. hex(4) .. " " .. hex(4) .. " " .. hex(4)
+				end
+			end)
+			st.conns[#st.conns + 1] = RunService.RenderStepped:Connect(function(dt)
+				local d = st.target - st.pct
+				if d > 0.05 then
+					st.pct = st.pct + math.max(d * math.min(1, dt * 4), dt * 5)
+					if st.pct > st.target then
+						st.pct = st.target
+					end
+					if st.pct > st.target then
+						st.target = st.pct
+					end
+				elseif st.creepCap and st.pct < st.creepCap then
+					st.pct = math.min(st.creepCap, st.pct + dt * 0.6)
+					if st.pct > st.target then
+						st.target = st.pct
+					end
+				end
+				PK.fill.Size = UD.new(st.pct / 100, 0, 1, 0)
+				PK.pct.Text = string.format("  %d%%", math.floor(st.pct))
+			end)
+			st.conns[#st.conns + 1] = RunService.RenderStepped:Connect(function(dt)
+				local y = scan.Position.Y.Scale + dt * 0.35
+				if y > 1 then
+					y = -0.02
+				end
+				scan.Position = UD.new(0, 0, y, 0)
+			end)
+			tw(mask, 0.45, { BackgroundTransparency = 0.35 })
+			backdrop.Visible = true
+			aB.set(1)
+			aB.tweenTo(0, 0.4)
+		end
+
+		function api.stage(text, pct)
+			pcall(function()
+				api.show()
+				if st.done then
+					return
+				end
+				raiseTop()
+				PK.title.Text = ucut(tostring(text or ""), 16)
+				PK.sub.Text = (pct and pct >= 94) and "SYSTEM  READY"
+					or (pct and pct >= 60) and "LOAD  FEATURES"
+					or "BUILD  CORE"
+				if pct then
+					pct = math.clamp(pct, 0, 100)
+					if pct > st.target then
+						st.target = pct
+					end
+				end
+				st.creepCap = math.min(96, st.target + 6)
+			end)
+		end
+
+		function api.progress(pct)
+			pcall(function()
+				if st.done or not pct then
+					return
+				end
+				pct = math.clamp(pct, 0, 100)
+				if pct > st.target then
+					st.target = pct
+				end
+			end)
+		end
+
+		function api.finish(afterOk)
+			if st.done then
+				return
+			end
+			st.done = true
+			pcall(function()
+				st.target = 100
+				st.pct = 100
+				PK.fill.Size = UD.new(1, 0, 1, 0)
+				PK.pct.Text = "  100%"
+				PK.pct.TextColor3 = C.Green
+				PK.title.Text = "构造完成"
+				PK.sub.Text = "SYSTEM  READY"
+				PK.sub.TextColor3 = C.Green
+				if PK.stroke then
+					PK.stroke.Color = C.Green
+				end
+			end)
+			task.wait(0.55)
+			for _, c in ipairs(st.conns) do
+				pcall(function()
+					c:Disconnect()
+				end)
+			end
+			st.conns = {}
+			pcall(function()
+				tw(PK.scale, 0.2, { Scale = 0.9 })
+			end)
+			task.wait(0.24)
+			pcall(function()
+				PK.root.Visible = false
+			end)
+			pcall(function()
+				OK.Visible = true
+				okScale.Scale = 0.85
+				aO.set(1)
+				tw(okScale, 0.38, { Scale = 1 }, Enum.EasingStyle.Back)
+				aO.tweenTo(0, 0.38)
+			end)
+			fireCB(afterOk)
+			local pc = RunService.RenderStepped:Connect(function(dt)
+				pulseOuter.Rotation = pulseOuter.Rotation + dt * 200
+			end)
+			task.wait(1.15)
+			pcall(function()
+				pc:Disconnect()
+			end)
+			pcall(function()
+				aO.tweenTo(1, 0.26)
+			end)
+			task.wait(0.3)
+			pcall(function()
+				OK.Visible = false
+			end)
+			pcall(function()
+				tw(mask, 0.45, { BackgroundTransparency = 1 })
+				aB.tweenTo(1, 0.4)
+			end)
+			task.wait(0.45)
+			pcall(function()
+				gui:Destroy()
+			end)
+			fireCB(afterOk)
+		end
+
+		function api.fail(text)
+			pcall(function()
+				api.show()
+				task.delay(7, function()
+					pcall(function()
+						gui:Destroy()
+					end)
+				end)
+				PK.title.Text = "加载中断"
+				PK.title.TextColor3 = C.Red
+				PK.sub.Text = ucut(text, 30)
+				PK.sub.TextColor3 = C.Red
+				PK.pct.TextColor3 = C.Red
+				if PK.stroke then
+					PK.stroke.Color = C.Red
+				end
+			end)
+		end
+
+		function api.destroy()
+			pcall(function()
+				for _, c in ipairs(st.conns) do
+					pcall(function()
+						c:Disconnect()
+					end)
+				end
+				st.conns = {}
+				st.done = true
+				gui:Destroy()
+			end)
+		end
+
+		__XJW_BOOT = api
+
+		api.stage("正在初始化核心...", 3)
+	end)
+	if not __bootOk or type(__XJW_BOOT) ~= "table" then
+		local fbOk = pcall(function()
+			local plr = game:GetService("Players").LocalPlayer
+			local par
+			pcall(function()
+				par = plr:FindFirstChildOfClass("PlayerGui")
+			end)
+			if not par then
+				local okCg, cg = pcall(function()
+					return game:GetService("CoreGui")
+				end)
+				if okCg and typeof(cg) == "Instance" then
+					par = cg
+				end
+			end
+			if not par then
+				par = plr:WaitForChild("PlayerGui", 10)
+			end
+			pcall(function()
+				local lft = par and par:FindFirstChild("XJWCenterBoot")
+				if lft and lft:IsA("ScreenGui") then
+					lft:Destroy()
+				end
+			end)
+			local g = Instance.new("ScreenGui")
+			pcall(function()
+				g.Name = "XJWCenterBootFB"
+				g.ResetOnSpawn = false
+				g.IgnoreGuiInset = true
+				g.DisplayOrder = 999999
+				g.Parent = par
+			end)
+			if not g.Parent then
+				pcall(function()
+					g.Parent = plr:FindFirstChildOfClass("PlayerGui")
+				end)
+			end
+			if not g.Parent then
+				error("fb no parent")
+			end
+			local shade = Instance.new("Frame")
+			pcall(function()
+				shade.Size = UDim2.fromScale(1, 1)
+				shade.BackgroundColor3 = Color3.fromRGB(4, 7, 14)
+				shade.BackgroundTransparency = 0.2
+				shade.BorderSizePixel = 0
+				shade.Parent = g
+			end)
+			local box = Instance.new("Frame")
+			pcall(function()
+				box.AnchorPoint = Vector2.new(0.5, 0.5)
+				box.Position = UDim2.fromScale(0.5, 0.5)
+				box.Size = UDim2.fromOffset(280, 92)
+				box.BackgroundColor3 = Color3.fromRGB(11, 16, 28)
+				box.BorderSizePixel = 0
+				box.Parent = g
+			end)
+			local t1 = Instance.new("TextLabel")
+			pcall(function()
+				t1.Position = UDim2.fromOffset(14, 12)
+				t1.Size = UDim2.new(1, -28, 0, 18)
+				t1.BackgroundTransparency = 1
+				t1.Font = Enum.Font.GothamBold
+				t1.TextSize = 13
+				t1.TextXAlignment = Enum.TextXAlignment.Left
+				t1.TextColor3 = Color3.fromRGB(222, 240, 255)
+				t1.Text = "正在构造功能..."
+				t1.Parent = box
+			end)
+			local t2 = Instance.new("TextLabel")
+			pcall(function()
+				t2.Position = UDim2.fromOffset(14, 44)
+				t2.Size = UDim2.new(1, -28, 0, 16)
+				t2.BackgroundTransparency = 1
+				t2.Font = Enum.Font.Code
+				t2.TextSize = 12
+				t2.TextXAlignment = Enum.TextXAlignment.Left
+				t2.TextColor3 = Color3.fromRGB(0, 229, 255)
+				t2.Text = "0%"
+				t2.Parent = box
+			end)
+			local bar = Instance.new("Frame")
+			pcall(function()
+				bar.Position = UDim2.fromOffset(14, 68)
+				bar.Size = UDim2.new(1, -28, 0, 5)
+				bar.BackgroundColor3 = Color3.fromRGB(24, 33, 56)
+				bar.BorderSizePixel = 0
+				bar.Parent = box
+			end)
+			local fill = Instance.new("Frame")
+			pcall(function()
+				fill.Size = UDim2.new(0, 0, 1, 0)
+				fill.BackgroundColor3 = Color3.fromRGB(0, 229, 255)
+				fill.BorderSizePixel = 0
+				fill.Parent = bar
+			end)
+
+			local pct, doneFlag, fired = 0, false, false
+			local api = {}
+			api.show = function() end
+			api.stage = function(text, p)
+				pcall(function()
+					t1.Text = tostring(text or "")
+					if p then
+						pct = math.max(pct, math.clamp(p, 0, 100))
+						fill.Size = UDim2.new(pct / 100, 0, 1, 0)
+						t2.Text = string.format("%d%%", math.floor(pct))
+					end
+				end)
+			end
+			api.progress = api.stage
+			api.finish = function(cb)
+				if doneFlag then
+					return
+				end
+				doneFlag = true
+				pcall(function()
+					fill.Size = UDim2.new(1, 0, 1, 0)
+					t2.Text = "100%"
+					t1.Text = "脚本已加载成功"
+					t1.TextColor3 = Color3.fromRGB(0, 255, 170)
+					t2.TextColor3 = Color3.fromRGB(0, 255, 170)
+				end)
+				if not fired and type(cb) == "function" then
+					fired = true
+					pcall(cb)
+				end
+				task.spawn(function()
+					task.wait(1.1)
+					pcall(function()
+						g:Destroy()
+					end)
+				end)
+			end
+			api.fail = function(text)
+				pcall(function()
+					t1.Text = "加载中断"
+					t1.TextColor3 = Color3.fromRGB(255, 70, 90)
+					t2.Text = tostring(text or "")
+				end)
+			end
+			api.destroy = function()
+				pcall(function()
+					g:Destroy()
+				end)
+			end
+			__XJW_BOOT = api
+		end)
+		if not fbOk or type(__XJW_BOOT) ~= "table" then
+			__XJW_BOOT = {
+				show = function() end, stage = function() end, progress = function() end,
+				finish = function(cb)
+					if type(cb) == "function" then
+						pcall(cb)
+					end
+				end,
+				fail = function() end, destroy = function() end,
+			}
+		end
+	end
+end
+
+local __XJW_STAGE_MAP = {
+	["start"] = 3,
+	["正在获取界面库"] = 5,
+	["下载界面库"] = 7,
+	["库已加载"] = 12,
+	["库校验通过"] = 16,
+	["窗口已创建"] = 22,
+	["开始建页签"] = 26,
+	["页签已建"] = 30,
+	["构建:趣味功能"] = 36,
+	["构建:趣味功能-ESP初始化"] = 48,
+	["构建:趣味功能-美化包"] = 58,
+	["构建:趣味功能-优化页"] = 66,
+	["构建:趣味功能-动作"] = 72,
+	["构建:界面设置页签"] = 76,
+	["设置页-建页签"] = 78,
+	["设置页-页签已建"] = 80,
+	["设置页-基础控件完成"] = 82,
+	["设置页-主题"] = 84,
+	["设置页-配置"] = 86,
+	["设置页-配置完成"] = 88,
+	["设置页-背景准备完成"] = 90,
+	["构建完成,收尾中"] = 94,
+}
+local __XJW_PCT = 0
+
+local function __XJW_STAGE_PCT(stage)
+	local p = __XJW_STAGE_MAP[stage]
+	if p then
+		return p
+	end
+	if stage:find("正在获取界面库", 1, true) then
+		return 5
+	end
+	if stage:find("构建", 1, true) or stage:find("设置页-", 1, true) or stage:find("界面构建", 1, true) then
+		return math.min(92, __XJW_PCT + 1.6)
+	end
+	return __XJW_PCT
+end
+
+local __XJW_READY_DONE = false
+local function __XJW_READY()
+	if __XJW_READY_DONE then
+		return
+	end
+	__XJW_READY_DONE = true
+	pcall(function()
+		local w = _G.__XJW_WIN
+		if w and type(w.Toggle) == "function" then
+			w:Toggle(true)
+		end
+	end)
+	pcall(function()
+		local now = tick()
+		local t0 = __XJW_T0 or now
+		game:GetService("StarterGui"):SetCore("SendNotification", {
+			Title = "XJW中心加载成功",
+			Text = string.format("耗时 %.2fs", now - t0),
+			Duration = 6,
+		})
+	end)
+end
+
+local function __XJW_LBL(t, afterOk)
+	local stage = tostring(t)
+	_G.__XJW_STAGE = stage
+	if stage == "库校验通过" then
+		_G.__XJW_T_LIB = tick()
+	end
+	if stage == "构建完成,收尾中" then
+		task.delay(20, function()
+			__XJW_READY()
+		end)
+	end
+	if stage == "DONE" then
+		local fired = false
+		local function once()
+			if fired then
+				return
+			end
+			fired = true
+			if type(afterOk) == "function" then
+				pcall(afterOk)
+			end
+		end
+		pcall(function()
+			__XJW_BOOT.stage("构造完成", 100)
+		end)
+		local okFin = pcall(function()
+			__XJW_BOOT.finish(once)
+		end)
+		if not okFin then
+			once()
+		end
+		task.spawn(function()
+			task.wait(2.2)
+			once()
+		end)
+		return
+	end
+	local p = __XJW_STAGE_PCT(stage)
+	if p > __XJW_PCT then
+		__XJW_PCT = p
+	end
+	pcall(function()
+		__XJW_BOOT.stage(stage, __XJW_PCT)
+	end)
+end
+
+local function __XJW_TIP(text,dur)
+pcall(function()
+game:GetService("StarterGui"):SetCore("SendNotification",{Title="XJW中心",Text=tostring(text),Duration=dur or 6})
+end)
+end
+local __XJW_OK,__XJW_ERR=xpcall(function()
+__XJW_T0=tick()
+local __XJW_BUILD="v31-INLINE-BOOT"
+__XJW_LBL("start")
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local UIS=game:GetService("UserInputService")
 local HttpService=game:GetService("HttpService")
 local LocalPlayer=Players.LocalPlayer
-local XJWUI_REPO="https://raw.githubusercontent.com/jiuyijiuyijiuyi91/UIKu/main/"
-local XJWUI_CDN="https://cdn.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu@main/"
 local XJWUI_NAME="XJWUI_v1.lua"
-local XJWUI_LOCAL={"XJWUI_v1.lua","UIKu/XJWUI_v1.lua"}
-local function canFile()
+local XJWUI_CACHE="XJWUI_v1.lua"
+local XJWUI_MIRRORS={
+"https://cdn.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu@main/",
+"https://fastly.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu@main/",
+"https://gcore.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu@main/",
+"https://testingcf.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu@main/",
+"https://cdn.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu/",
+"https://fastly.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu/",
+}
+local function bootTip(text,dur)
+pcall(function()
+game:GetService("StarterGui"):SetCore("SendNotification",{Title="XJW中心",Text=tostring(text),Duration=dur or 3})
+end)
+end
+local function canRead()
 return type(isfile) == "function" and type(readfile) == "function" and type(loadstring) == "function"
 end
+local function canWrite()
+return type(writefile) == "function"
+end
+local function tryLib(src)
+if type(src) ~= "string" or #src < 200 then return nil end
+local fn=loadstring(src)
+if type(fn) ~= "function" then return nil end
+local ok,res=pcall(fn)
+if ok and type(res) == "table" and type(res.CreateWindow) == "function" and type(res.CreateLoading) == "function" then
+return res
+end
+return nil
+end
 local function loadXJWUI()
-local lib
-for _,path in ipairs(XJWUI_LOCAL) do
-if lib then break end
-local ok,res=pcall(function()
-if canFile() and isfile(path) then
-return loadstring(readfile(path))()
-end
-end)
-if ok and type(res) == "table" and type(res.CreateWindow) == "function" then
-lib=res
+if canRead() then
+for _,path in ipairs({XJWUI_CACHE,"UIKu/"..XJWUI_NAME}) do
+if isfile(path) then
+local ok,src=pcall(readfile,path)
+if ok then
+local lib=tryLib(src)
+if lib then return lib end
 end
 end
-for _,root in ipairs({XJWUI_CDN,XJWUI_REPO}) do
-if lib then break end
-local ok,res=pcall(function()
-return loadstring(game:HttpGet(root .. XJWUI_NAME))()
-end)
-if ok and type(res) == "table" and type(res.CreateWindow) == "function" then
-lib=res
 end
 end
+for i=1,2 do
+local root=XJWUI_MIRRORS[i]
+if root then
+__XJW_LBL("正在获取界面库 "..i.."/2")
+local ok,src=pcall(function() return HttpService:GetAsync(root .. XJWUI_NAME) end)
+if ok and type(src)=="string" and #src>200 then
+local lib=tryLib(src)
+if lib then
+if canWrite() then pcall(writefile,XJWUI_CACHE,src) end
 return lib
 end
+end
+end
+end
+__XJW_LBL("界面库获取失败")
+return nil
+end
+bootTip("正在加载界面库…(首次较慢)",5)
+__XJW_LBL("下载界面库")
 local Library=loadXJWUI()
+__XJW_LBL("库已加载")
 if type(Library) ~= "table" or Library.CreateWindow == nil or Library.CreateLoading == nil then
 warn("[XJW中心] XJWUI 库加载失败")
+bootTip("界面库加载失败：镜像不通或版本不匹配，请重试",8)
 return
 end
+__XJW_LBL("库校验通过")
 Library.ForceCheckbox=true
 local function guardPrimaryPartCFrame()
 if type(hookmetamethod) ~= "function" or type(getnamecallmethod) ~= "function" then return end
@@ -59,10 +1025,14 @@ pcall(function() isModel=self:IsA("Model") end)
 if isModel then
 local hasPart=false
 pcall(function() hasPart=self.PrimaryPart ~= nil end)
-if not hasPart then
+local hasHum=false
+pcall(function() hasHum=self:FindFirstChildOfClass("Humanoid")~=nil end)
+if not hasPart and not hasHum then
 local cf=select(1,...)
+if typeof(cf)=="CFrame" then
 pcall(function() self:PivotTo(cf) end)
 return self
+end
 end
 end
 end
@@ -122,9 +1092,10 @@ end
 BOOT.hideFloats=hideAllFloats
 hideAllFloats()
 task.spawn(function()
-while not BOOT.finished do
+for _=1,40 do
+if BOOT and BOOT.finished then break end
 hideAllFloats()
-task.wait(0.25)
+task.wait(0.5)
 end
 end)
 local function showMain()
@@ -145,19 +1116,36 @@ end)
 end
 end
 end
+local __XJW_FETCH
+local Notify
+local getCharacter
+local __XJW_TAG="远程脚本"
 local function safeLoad(url)
-local ok,content=pcall(function()
-return game:HttpGet(url)
+local content=__XJW_FETCH and __XJW_FETCH(url)
+if not content or#content<24 then
+pcall(function()
+game.StarterGui:SetCore("SendNotification",{Title="加载失败",Text=tostring(__XJW_TAG).." 全部线路不可用",Duration=5})
 end)
-if ok and content and#content>0 then
+return false
+end
 local fn=loadstring(content)
-if fn then
-return fn()
+if not fn then
+pcall(function()
+game.StarterGui:SetCore("SendNotification",{Title="代码错误",Text=tostring(__XJW_TAG).." 无法编译",Duration=5})
+end)
+return false
 end
+local ok,e=pcall(fn)
+if not ok then
+pcall(function()
+game.StarterGui:SetCore("SendNotification",{Title="运行错误",Text=tostring(__XJW_TAG).." "..tostring(e):sub(1,90),Duration=6})
+end)
+return false
 end
+return true
 end
 local HttpService=game:GetService("HttpService")
-local _lastUpdate="2026年11月15日5时42分"
+local _lastUpdate="2026年11月20日10时53分"
 local Window=Library:CreateWindow({
 Title="XJW中心",
 Footer="感谢支持",
@@ -179,7 +1167,9 @@ Dropdown=true,
 KeyPicker=true,
 },
 })
+__XJW_LBL("窗口已创建")
 BOOT.window=Window
+_G.__XJW_WIN=Window
 BOOT.showWindow=function()
 if Window and type(Window.Toggle) == "function" then
 Window:Toggle(true)
@@ -270,6 +1260,55 @@ end)
 local BACKGROUND_IMAGE="https://cdn.jsdelivr.net/gh/jiuyijiuyijiuyi91/XJW666@main/XJW%E8%84%9A%E6%9C%AC%E5%A3%81%E7%BA%B8.png"
 local BACKGROUND_SCALE_MODE=Enum.ScaleType.Crop
 local BACKGROUND_IMAGE_TRANSPARENCY=0.75
+local __R={q={},ready=false,at=nil,shown=false}
+__R.on=function(fn)
+if type(fn)~="function"then return end
+if __R.ready then
+task.spawn(function()pcall(fn)end)
+return
+end
+table.insert(__R.q,fn)
+end
+__R.run=function()
+if __R.ready then return end
+__R.ready=true
+__R.at=tick()
+local list=__R.q
+__R.q={}
+task.spawn(function()
+local __bt=os.clock()
+for _,fn in ipairs(list)do
+if Library and Library.Unloaded then return end
+pcall(fn)
+local __bn=os.clock()
+if __bn-__bt>=0.06 then __bt=__bn task.wait() end
+end
+end)
+end
+__R.iq={}
+__R.img=function(fn)
+if type(fn)~="function"then return end
+if __R.imgDone then
+task.spawn(function()pcall(fn)end)
+return
+end
+table.insert(__R.iq,fn)
+end
+__R.imgRun=function()
+if __R.imgDone then return end
+__R.imgDone=true
+local list=__R.iq
+__R.iq={}
+task.spawn(function()
+local __bt=os.clock()
+for _,fn in ipairs(list)do
+if Library and Library.Unloaded then return end
+pcall(fn)
+local __bn=os.clock()
+if __bn-__bt>=0.06 then __bt=__bn task.wait() end
+end
+end)
+end
 local function fixBackgroundAspect()
 local gui=Library and Library.ScreenGui
 if not gui then return end
@@ -290,12 +1329,16 @@ end
 end)
 end
 end
+__R.imgSetup=function()
+if __R.bgDone then return end
+__R.bgDone=true
 if Library and type(Library.SetBackgroundImage)=="function"then
 pcall(function()
 Library:SetBackgroundImage(BACKGROUND_IMAGE)
 end)
 end
 fixBackgroundAspect()
+end
 if Library and type(Library.SetBackgroundImage)=="function"then
 local rawSetBackgroundImage=Library.SetBackgroundImage
 Library.SetBackgroundImage=function(self,image)
@@ -306,6 +1349,9 @@ return res
 end
 end
 task.spawn(function()
+while not __R.ready do
+task.wait(0.1)
+end
 while true do
 if Library and Library.Unloaded then return end
 fixBackgroundAspect()
@@ -346,19 +1392,26 @@ end
 end)
 end
 end
-softenOuterBorder()
+local SOFT_DIRTY=true
 if type(Library.UpdateColorsUsingRegistry)=="function"then
 local rawUpdateColors=Library.UpdateColorsUsingRegistry
 Library.UpdateColorsUsingRegistry=function(self,...)
 local res=rawUpdateColors(self,...)
-pcall(softenOuterBorder)
+SOFT_DIRTY=true
 return res
 end
 end
 task.spawn(function()
-for _=1,6 do
+task.wait(0.5)
+while true do
+if Library and Library.Unloaded then return end
+if SOFT_DIRTY then
+SOFT_DIRTY=false
+local t0=os.clock()
 pcall(softenOuterBorder)
-task.wait(1)
+if os.clock()-t0>0.1 then task.wait() end
+end
+task.wait(0.5)
 end
 end)
 local FLOAT_GLASS=Color3.fromRGB(255,255,255)
@@ -1084,11 +2137,26 @@ if type(Library.InstallNotify)=="function"then
 Library:InstallNotify("自制脚本")
 end
 if type(Library.InstallBackground)=="function"then
-Library:InstallBackground()
+if __R and type(__R.img)=="function"then
+__R.img(function()
+pcall(function() Library:InstallBackground() end)
+if type(__R.imgSetup)=="function"then
+pcall(__R.imgSetup)
+end
+end)
+else
+pcall(function() Library:InstallBackground() end)
+if type(__R.imgSetup)=="function"then
+pcall(__R.imgSetup)
+end
+end
 end
 if type(Library.StyleSidebar)=="function"then
+__R.on(function()
 Library:StyleSidebar()
+end)
 end
+__XJW_LBL("开始建页签")
 local Tabs={
 Announcement=Window:AddTab("公告","megaphone"),
 ScriptInfo=Window:AddTab("玩家信息","info"),
@@ -1098,13 +2166,311 @@ Visual=Window:AddTab("视觉","eye"),
 Aim=Window:AddTab("自瞄","crosshair"),
 Function=Window:AddTab("趣味功能","list"),
 }
+do
+__R.shown=false
+pcall(__R.run)
+end
+__XJW_LBL("页签已建,窗口待显示")
+local function __XJW_NOTE(title,text)
+pcall(function()
+game.StarterGui:SetCore("SendNotification",{Title=tostring(title),Text=tostring(text):sub(1,120),Duration=4})
+end)
+end
 
+local function __XJW_URLENC(u)
+return (u:gsub("[^%w%-%._~:/%?%&%=%+%%%,;@%$!%*'%(%)%[%]]", function(c)
+return string.format("%%%02X", string.byte(c))
+end))
+end
+
+local __XJW_IO_OK=(type(isfile)=="function" and type(readfile)=="function" and type(writefile)=="function" and type(isfolder)=="function" and type(makefolder)=="function")
+
+local function __XJW_HASH(s)
+local h=5381
+for i=1,#s do h=(h*33+s:byte(i))%4294967296 end
+return string.format("%08x",h)
+end
+
+local function __XJW_CACHEP(url)
+if not __XJW_IO_OK then return nil end
+pcall(function()
+if not isfolder("XJWLoadCache")then makefolder("XJWLoadCache")end
+end)
+return "XJWLoadCache/"..__XJW_HASH(url)..".lua"
+end
+
+local function __XJW_CREAD(url)
+local p=__XJW_CACHEP(url)
+if not p then return nil end
+local ok,body=pcall(function()
+if isfile(p)then return readfile(p)end
+end)
+if ok and type(body)=="string" and #body>24 then return body end
+return nil
+end
+
+local function __XJW_CWRITE(url,body)
+local p=__XJW_CACHEP(url)
+if not p then return end
+pcall(function() writefile(p,body) end)
+end
+
+local function __XJW_PREF_GET()
+if _G.__XJW_MIRROR_PREF then return _G.__XJW_MIRROR_PREF end
+if not __XJW_IO_OK then return nil end
+local ok,v=pcall(function()
+if isfile("XJWLoadCache/mirror.txt")then return readfile("XJWLoadCache/mirror.txt")end
+end)
+if ok and type(v)=="string" and #v>0 then
+_G.__XJW_MIRROR_PREF=(v:gsub("%s",""))
+return _G.__XJW_MIRROR_PREF
+end
+return nil
+end
+
+local function __XJW_PREF_SET(name)
+if not name then return end
+_G.__XJW_MIRROR_PREF=name
+if not __XJW_IO_OK then return end
+pcall(function()
+if not isfolder("XJWLoadCache")then makefolder("XJWLoadCache")end
+writefile("XJWLoadCache/mirror.txt",name)
+end)
+end
+
+local function __XJW_NORM(u)
+local o,r,br,p=u:match("^https://github%.com/([^/]+)/([^/]+)/raw/([^/]+)/(.+)$")
+if o then return "https://raw.githubusercontent.com/"..o.."/"..r.."/refs/heads/"..br.."/"..p end
+o,r,br,p=u:match("^https://github%.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)$")
+if o then return "https://raw.githubusercontent.com/"..o.."/"..r.."/refs/heads/"..br.."/"..p end
+return u
+end
+
+local function __XJW_CANDS(u)
+local out={}
+u=__XJW_NORM(u)
+local owner,repo,rest=u:match("^https://raw%.githubusercontent%.com/([^/]+)/([^/]+)/(.+)$")
+if owner then
+local branch,path=rest:match("^refs/heads/(.-)/(.+)$")
+if not branch then branch,path=rest:match("^([^/]+)/(.+)$") end
+if branch and path then
+local mid=owner.."/"..repo.."@"..branch.."/"..path
+table.insert(out,{"onms","https://jsd.onmicrosoft.cn/gh/"..mid})
+table.insert(out,{"jsdelivr","https://cdn.jsdelivr.net/gh/"..mid})
+table.insert(out,{"ghfast","https://ghfast.top/"..u})
+table.insert(out,{"ghproxy","https://gh-proxy.com/"..u})
+table.insert(out,{"fastly","https://fastly.jsdelivr.net/gh/"..mid})
+table.insert(out,{"gcore","https://gcore.jsdelivr.net/gh/"..mid})
+table.insert(out,{"testingcf","https://testingcf.jsdelivr.net/gh/"..mid})
+end
+table.insert(out,{"raw",u})
+elseif u:find("pastebin.com",1,true) then
+table.insert(out,{"allorigins","https://api.allorigins.win/raw?url="..__XJW_URLENC(u)})
+table.insert(out,{"corsproxy","https://corsproxy.io/?"..__XJW_URLENC(u)})
+table.insert(out,{"raw",u})
+else
+table.insert(out,{"raw",u})
+table.insert(out,{"ghfast","https://ghfast.top/"..u})
+table.insert(out,{"ghproxy","https://gh-proxy.com/"..u})
+table.insert(out,{"allorigins","https://api.allorigins.win/raw?url="..__XJW_URLENC(u)})
+end
+local pref=__XJW_PREF_GET()
+if pref then
+for i,c in ipairs(out) do
+if c[1]==pref and i>1 then
+local hit=table.remove(out,i)
+table.insert(out,1,hit)
+break
+end
+end
+end
+return out
+end
+
+local function __XJW_ISCODE(body)
+if type(body)~="string" or #body<24 then return false end
+local head=body:sub(1,600):lower()
+if head:find("<!doctype",1,true) then return false end
+if head:find("<html",1,true) then return false end
+if head:find("<head",1,true) then return false end
+if head:find('"error"',1,true) then return false end
+if head:find("404: not found",1,true) then return false end
+if head:find("bad gateway",1,true) then return false end
+return true
+end
+
+local __XJW_INTRY=false
+local function __XJW_TRY(u)
+__XJW_INTRY=true
+local ok,body=pcall(function() return game:HttpGet(u,true) end)
+__XJW_INTRY=false
+if ok and __XJW_ISCODE(body) then return body end
+ok,body=pcall(function() return request({Url=u,Method="GET",Headers={["User-Agent"]="Mozilla/5.0"}}).Body end)
+if ok and __XJW_ISCODE(body) then return body end
+ok,body=pcall(function() return HttpService:GetAsync(u,true) end)
+if ok and __XJW_ISCODE(body) then return body end
+return nil
+end
+
+__XJW_FETCH=function(url)
+local cands=__XJW_CANDS(url)
+local tried,total=0,0
+for _,c in ipairs(cands) do
+total=total+1
+if tried<4 then
+tried=tried+1
+local body=__XJW_TRY(c[2])
+if body then
+__XJW_PREF_SET(c[1])
+return body,c[1]
+end
+end
+end
+return nil,total
+end
+
+local function __XJW_EXEC(body,label)
+local fn,err=loadstring(body)
+if not fn then fn,err=loadstring(body,"="..tostring(label)) end
+if not fn then
+__XJW_NOTE("代码错误",tostring(label).." "..tostring(err):sub(1,70))
+return false
+end
+local ok,e=pcall(fn)
+if not ok then
+__XJW_NOTE("运行错误",tostring(label).." "..tostring(e):sub(1,70))
+return false
+end
+return true
+end
+
+local __XJW_Q,__XJW_RUNNING,__XJW_LOCK={},false,{}
+
+local function __XJW_DO(url,label)
+local body=__XJW_CREAD(url)
+if body then
+if __XJW_EXEC(body,label) then
+__XJW_NOTE("已加载",tostring(label).."（缓存）")
+end
+return
+end
+local src
+body,src=__XJW_FETCH(url)
+if not body then
+__XJW_NOTE("加载失败",tostring(label).." "..tostring(src or "?").." 条线路均不可用")
+return
+end
+__XJW_CWRITE(url,body)
+if __XJW_EXEC(body,label) then
+__XJW_NOTE("已加载",tostring(label).."（"..tostring(src).."）")
+end
+end
+
+local function __XJW_PUMP()
+if __XJW_RUNNING then return end
+__XJW_RUNNING=true
+task.spawn(function()
+while #__XJW_Q>0 do
+local job=table.remove(__XJW_Q,1)
+pcall(__XJW_DO,job[1],job[2])
+__XJW_LOCK[job[1]]=nil
+task.wait(0.2)
+end
+__XJW_RUNNING=false
+end)
+end
+
+local function __XJW_RUN(url,label)
+local label=label or "远程脚本"
+url=tostring(url)
+if __XJW_LOCK[url]then
+__XJW_NOTE("请稍候",label.." 正在加载中")
+return
+end
+__XJW_LOCK[url]=true
+__XJW_NOTE("加载中",label)
+table.insert(__XJW_Q,{url,label})
+__XJW_PUMP()
+end
+
+local __XJW_ORIG_HTTPGET=game.HttpGet
+local __XJW_INFETCH=false
+local function __XJW_HOOK()
+if type(__XJW_ORIG_HTTPGET)=="function"then
+pcall(function()
+game.HttpGet=function(self,url,...)
+if type(url)=="string"and not __XJW_INFETCH and not __XJW_INTRY and url:sub(1,4)=="http"then
+__XJW_INFETCH=true
+local body=__XJW_FETCH(url)
+__XJW_INFETCH=false
+if body then return body end
+end
+return __XJW_ORIG_HTTPGET(self,url,...)
+end
+end)
+end
+pcall(function()
+local g=(getgenv and getgenv())or _G
+if type(g.HttpGet)=="function"then
+local o=g.HttpGet
+g.HttpGet=function(url,...)
+if type(url)=="string"and not __XJW_INFETCH and not __XJW_INTRY and url:sub(1,4)=="http"then
+__XJW_INFETCH=true
+local body=__XJW_FETCH(url)
+__XJW_INFETCH=false
+if body then return body end
+end
+return o(url,...)
+end
+end
+end)
+pcall(function()
+local g=(getgenv and getgenv())or _G
+if type(g.HttpGetAsync)=="function"then
+local o=g.HttpGetAsync
+g.HttpGetAsync=function(url,...)
+if type(url)=="string"and not __XJW_INFETCH and not __XJW_INTRY and url:sub(1,4)=="http"then
+__XJW_INFETCH=true
+local body=__XJW_FETCH(url)
+__XJW_INFETCH=false
+if body then return body end
+end
+return o(url,...)
+end
+end
+end)
+end
+__XJW_HOOK()
+
+local __XJW_FILL=function()
+
+local __frozenSides={}
+for _,__tab in pairs(Tabs)do
+if type(__tab)=="table"and type(__tab.Sides)=="table"then
+for _,__side in ipairs(__tab.Sides)do
+if typeof(__side)=="Instance"and __side:IsA("ScrollingFrame")then
+local __okF=pcall(function()
+__side.AutomaticCanvasSize=Enum.AutomaticSize.None
+end)
+if __okF then table.insert(__frozenSides,__side)end
+end
+end
+end
+end
 do
 local gbCount=0
 local ctlCount=0
+local __paceT=os.clock()
 local function yielding()
 if not BOOT then return false end
 return BOOT.finished~=true
+end
+local function __budget()
+local now=os.clock()
+if now-__paceT>=0.08 then
+__paceT=now
+task.wait()
+end
 end
 local function hookMethod(obj,m,onDone)
 if type(obj)~="table"then return end
@@ -1126,7 +2492,7 @@ if type(g)~="table"then return g end
 for _,m in ipairs(CTL_METHODS)do
 hookMethod(g,m,function()
 ctlCount=ctlCount + 1
-if yielding()and ctlCount % 8 == 0 then task.wait()end
+if yielding()then __budget()end
 end)
 end
 return g
@@ -1137,7 +2503,7 @@ if type(tab)=="table"then
 hookMethod(tab,m,function(res)
 gbCount=gbCount + 1
 throttleGroup(res)
-if yielding()and gbCount % 2 == 0 then task.wait()end
+if yielding()then __budget()end
 end)
 end
 end
@@ -1172,9 +2538,8 @@ pcall(function()Window:SetSidebarWidth(SIDEBAR_WIDTH)end)
 end
 styleTabButtons()
 task.defer(styleTabButtons)
-task.delay(0.5,styleTabButtons)
-task.delay(1.5,styleTabButtons)
-task.delay(6,styleTabButtons)
+task.delay(0.6,styleTabButtons)
+task.delay(2,styleTabButtons)
 end
 local InfoBox=Tabs.Announcement:AddLeftGroupbox("信息","id-card")
 local lp=game.Players.LocalPlayer
@@ -1192,6 +2557,7 @@ avatarImage.Image="rbxasset://textures/ui/iconAssetMissing.png"
 avatarImage.ScaleType=Enum.ScaleType.Crop
 avatarImage.BorderColor3=Color3.fromRGB(0,0,0)
 avatarImage.Parent=avatarFrame
+__R.img(function()
 task.spawn(function()
 local ok,url=pcall(function()
 return game:GetService("Players"):GetUserThumbnailAsync(lp.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size420x420)
@@ -1199,6 +2565,7 @@ end)
 if ok and url and url~=""and avatarImage and avatarImage.Parent then
 avatarImage.Image=url
 end
+end)
 end)
 InfoBox:AddUIPassthrough("InfoAvatar",{Instance=avatarFrame,Height=110})
 end
@@ -1268,7 +2635,7 @@ local res=nil
 local lastErr=nil
 for retry=1,3 do
 local ok2,r=pcall(function()
-return game:HttpGet(url)
+return HttpService:GetAsync(url)
 end)
 if ok2 and r and r~=""then
 res=r
@@ -1368,7 +2735,7 @@ Headers={["Cache-Control"]="no-cache",["Pragma"]="no-cache"},
 })
 if ok and type(r)=="table"and type(r.Body)=="string"then return r.Body end
 end
-local ok2,body=pcall(function()return game:HttpGet(url)end)
+local ok2,body=pcall(function()return HttpService:GetAsync(url)end)
 if ok2 and type(body)=="string"then return body end
 return nil
 end
@@ -1836,7 +3203,7 @@ local AimBox=Tabs.Aim:AddLeftGroupbox("自瞄","target")
 local AimSideBox=Tabs.Aim:AddRightGroupbox("单独自瞄","crosshair")
 AimSideBox:AddLabel({Text="如果你感到很卡的话，加载下面的单独自瞄",DoesWrap=true})
 AimSideBox:AddButton({Text="点击加载单独透视自瞄",Func=function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/78789191/main/XJW自瞄透视.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/78789191/main/XJW自瞄透视.lua","XJW自瞄透视")
 end})
 local AimbotEnabled=false
 local LockMode="普通"
@@ -1880,6 +3247,17 @@ aimFOVCircle=circle
 end
 end
 createAimFOVCircle()
+local function isPetModel(obj)
+if not obj then return false end
+local ok,res=pcall(function()
+local n=obj.Name
+if n:find("Animal")or n:find("Pet")or n:find("宠物")or n:find("动物")then return true end
+local attr=obj:GetAttribute("PetId")or obj:GetAttribute("AnimalId")or obj:GetAttribute("Owner")
+if attr~=nil then return true end
+return false
+end)
+return ok and res
+end
 local function aimGetCharacter(obj)
 if obj:IsA("Player")then
 return obj.Character
@@ -1967,7 +3345,7 @@ for _,obj in ipairs(workspace:GetDescendants())do
 if obj:IsA("Model")and obj~=me.Character then
 local humanoid=obj:FindFirstChildOfClass("Humanoid")
 local rootPart=obj:FindFirstChild("HumanoidRootPart")
-if humanoid and rootPart and humanoid.Health>0 then
+if humanoid and rootPart and humanoid.Health>0 and not isPetModel(obj) then
 local isPlayerChar=false
 for _,plr in ipairs(plrs:GetPlayers())do
 if plr.Character==obj then
@@ -2269,13 +3647,38 @@ end)
 end
 end)
 end
+__XJW_CTL_N=0
+__XJW_GB_N=0
+local __PACE_T=os.clock()
+function __XJW_PACE()
+__XJW_CTL_N=__XJW_CTL_N+1
+local now=os.clock()
+if now-__PACE_T>=0.08 then
+__PACE_T=now
+task.wait()
+end
+end
+function __XJW_GB(name)
+__XJW_GB_N=__XJW_GB_N+1
+__XJW_LBL("界面构建 "..__XJW_GB_N.." "..tostring(name))
+local now=os.clock()
+if now-__PACE_T>=0.08 then
+__PACE_T=now
+task.wait()
+end
+end
+__XJW_LBL("构建:趣味功能")
+__XJW_GB("其他")
 local FeatureBox=Tabs.Function:AddLeftGroupbox("其他","list")
+__XJW_PACE()
 FeatureBox:AddButton("静默甩飞",function()
 safeLoad("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/78789191/refs/heads/main/%E9%9D%99%E9%BB%98%E7%94%A9%E9%A3%9E(%E5%BC%80%E6%BA%90).lua")
 end)
+__XJW_PACE()
 FeatureBox:AddButton("祖国人汉化",function()
 safeLoad("https://raw.githubusercontent.com/kongbaNB/-/refs/heads/main/%E7%A5%96%E5%9B%BD%E4%BA%BA%E6%B1%89%E5%8C%96")
 end)
+__XJW_PACE()
 FeatureBox:AddButton("无敌少侠飞行r15",function()
 local ok,err=pcall(function()
 safeLoad("https://raw.githubusercontent.com/396abc/Script/refs/heads/main/MobileFly.lua")
@@ -2284,37 +3687,49 @@ if not ok then
 game.StarterGui:SetCore("SendNotification",{Title="加载失败",Text=tostring(err):sub(1,100),Duration=5})
 end
 end)
+__XJW_PACE()
 FeatureBox:AddButton("缓慢快速跑",function()
-loadstring(game:HttpGet("https://pastebin.com/raw/7fLqezjn"))()
+__XJW_RUN("https://pastebin.com/raw/7fLqezjn","7fLqezjn")
 end)
+__XJW_PACE()
 FeatureBox:AddButton("蜗牛V2",function()
-loadstring(game:HttpGet("https://pastebin.com/raw/1PvSFyZ4"))()
+__XJW_RUN("https://pastebin.com/raw/1PvSFyZ4","1PvSFyZ4")
 end)
+__XJW_PACE()
 FeatureBox:AddButton("SCP096",function()
-loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-SCP-096-36948"))()
+__XJW_RUN("https://rawscripts.net/raw/Universal-Script-FE-SCP-096-36948","Universal-Script-FE-SCP-096-36948")
 end)
+__XJW_PACE()
 FeatureBox:AddButton("时光回溯",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%97%B6%E5%85%89%E5%9B%9E%E6%BA%AF.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%97%B6%E5%85%89%E5%9B%9E%E6%BA%AF.lua","时光回溯")
 end)
+__XJW_PACE()
 FeatureBox:AddButton("死亡笔记",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%AD%BB%E4%BA%A1%E7%AC%94%E8%AE%B0.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%AD%BB%E4%BA%A1%E7%AC%94%E8%AE%B0.lua","死亡笔记")
 end)
+__XJW_PACE()
 FeatureBox:AddButton("更帅的超人式飞行",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%9B%B4%E5%B8%85%E7%9A%84%E8%B6%85%E4%BA%BA%E5%BC%8F%E9%A3%9E%E8%A1%8C.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%9B%B4%E5%B8%85%E7%9A%84%E8%B6%85%E4%BA%BA%E5%BC%8F%E9%A3%9E%E8%A1%8C.lua","更帅的超人式飞行")
 end)
+__XJW_GB("其他")
 local FeatureBoxR=Tabs.Function:AddRightGroupbox("其他","sparkles")
+__XJW_PACE()
 FeatureBoxR:AddButton("摄像机穿墙",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%91%84%E5%83%8F%E6%9C%BA%E7%A9%BF%E5%A2%99.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%91%84%E5%83%8F%E6%9C%BA%E7%A9%BF%E5%A2%99.lua","摄像机穿墙")
 end)
+__XJW_PACE()
 FeatureBoxR:AddButton("逆转疾跑",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E9%80%86%E8%BD%AC%E7%96%BE%E8%B7%91.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E9%80%86%E8%BD%AC%E7%96%BE%E8%B7%91.lua","逆转疾跑")
 end)
+__XJW_PACE()
 FeatureBoxR:AddButton("死亡笔记V2",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%AD%BB%E4%BA%A1%E7%AC%94%E8%AE%B0V2.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%AD%BB%E4%BA%A1%E7%AC%94%E8%AE%B0V2.lua","死亡笔记V2")
 end)
+__XJW_PACE()
 FeatureBoxR:AddButton("星光特效",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%98%9F%E5%85%89%E7%89%B9%E6%95%88.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%98%9F%E5%85%89%E7%89%B9%E6%95%88.lua","星光特效")
 end)
+__XJW_PACE()
 FeatureBoxR:AddButton("踏空行走",function()
 pcall(function()
 end)
@@ -2324,6 +3739,7 @@ local airSwimEnabled=false
 local airSwimConns={}
 local airSwimBV=nil
 local airSwimBG=nil
+__XJW_PACE()
 FeatureBoxR:AddToggle("AirSwimToggle",{
 Text="空中游泳",
 Default=false,
@@ -2507,6 +3923,7 @@ end
 table.sort(names)
 return names
 end
+__XJW_GB("传送功能")
 local TeleportBox=Tabs.TP:AddLeftGroupbox("传送功能","send")
 local tpTargetName=""
 local tpDropdown=TeleportBox:AddDropdown("TP2_Target",{
@@ -2516,10 +3933,12 @@ Default="",
 Multi=false,
 })
 tpDropdown:OnChanged(function(v)tpTargetName=v end)
+__XJW_PACE()
 TeleportBox:AddButton("刷新玩家列表",function()
 tpDropdown:SetValues(refreshPlayerNames())
 pNotify("刷新","已刷新玩家列表")
 end)
+__XJW_PACE()
 TeleportBox:AddButton("传送到选定玩家",function()
 if tpTargetName==""then pNotify("提示","请先选择玩家")return end
 local target=getTargetPlayer(tpTargetName)
@@ -2534,6 +3953,7 @@ pNotify("成功","已传送到 "..target.Name)
 end
 end)
 local tpLoopSingle=false
+__XJW_PACE()
 TeleportBox:AddToggle("TP2_LoopSingle",{Text="循环传送",Default=false}):OnChanged(function(v)
 tpLoopSingle=v
 if v then
@@ -2556,6 +3976,7 @@ end)
 table.insert(PState.threads,thread)
 end
 end)
+__XJW_GB("坐头功能")
 local HeadSitBox=Tabs.TP:AddLeftGroupbox("坐头功能","users")
 local sitHeadTargetName=""
 local sitHeadDropdown=HeadSitBox:AddDropdown("SitHead_Target",{
@@ -2565,6 +3986,7 @@ Default="",
 Multi=false,
 })
 sitHeadDropdown:OnChanged(function(v)sitHeadTargetName=v end)
+__XJW_PACE()
 HeadSitBox:AddButton("刷新玩家列表",function()
 sitHeadDropdown:SetValues(refreshPlayerNames())
 pNotify("刷新","已刷新玩家列表")
@@ -2631,11 +4053,13 @@ end)
 end)
 pNotify("坐头启动","已开始坐 "..tostring(playerName).." 的头")
 end
+__XJW_PACE()
 HeadSitBox:AddButton("坐选定玩家头上",function()
 if sitHeadTargetName==""then pNotify("提示","请先选择玩家")return end
 stopHeadSit()
 startHeadSit(sitHeadTargetName)
 end)
+__XJW_PACE()
 HeadSitBox:AddToggle("SitHead_Loop",{Text="循环坐头(死亡后继续)",Default=false}):OnChanged(function(v)
 loopHeadSit=v
 if v and sitHeadTargetName~=""then
@@ -2645,7 +4069,9 @@ else
 stopHeadSit()
 end
 end)
+__XJW_PACE()
 HeadSitBox:AddButton("停止坐头",stopHeadSit)
+__XJW_GB("甩飞功能")
 local FlingBox2=Tabs.TP:AddLeftGroupbox("甩飞功能","wind")
 local flingTargetName=""
 local flingDropdown=FlingBox2:AddDropdown("Fling2_Target",{
@@ -2655,6 +4081,7 @@ Default="",
 Multi=false,
 })
 flingDropdown:OnChanged(function(v)flingTargetName=v end)
+__XJW_PACE()
 FlingBox2:AddButton("刷新玩家列表",function()
 flingDropdown:SetValues(refreshPlayerNames())
 pNotify("刷新","已刷新玩家列表")
@@ -2775,6 +4202,7 @@ task.wait()
 until(RootPart.Position-getgenv().OldPos.p).Magnitude<25
 workspace.FallenPartsDestroyHeight=getgenv().FPDH
 end
+__XJW_PACE()
 FlingBox2:AddButton("甩飞选定玩家",function()
 if flingTargetName==""then pNotify("错误","请先选择玩家")return end
 local target=getTargetPlayer(flingTargetName)
@@ -2782,6 +4210,7 @@ if not target then pNotify("错误","未找到玩家")return end
 pcall(function()SkidFling2(target)end)
 pNotify("成功","甩飞玩家一次")
 end)
+__XJW_PACE()
 FlingBox2:AddToggle("Fling2_LoopSingle",{Text="循环甩飞选定玩家",Default=false}):OnChanged(function(v)
 flingLoops2.single=v
 if v then
@@ -2800,6 +4229,7 @@ else
 pNotify("停止","循环甩飞已停止")
 end
 end)
+__XJW_PACE()
 FlingBox2:AddButton("甩飞所有玩家",function()
 local count=0
 for _,p in ipairs(PPlayers:GetPlayers())do
@@ -2811,6 +4241,7 @@ end
 end
 pNotify("成功","已甩飞 "..count.." 个玩家")
 end)
+__XJW_PACE()
 FlingBox2:AddToggle("Fling2_LoopAll",{Text="循环甩飞所有玩家",Default=false}):OnChanged(function(v)
 flingLoops2.all=v
 if v then
@@ -2831,11 +4262,13 @@ else
 pNotify("停止","循环甩飞所有玩家已停止")
 end
 end)
+__XJW_PACE()
 FlingBox2:AddButton("停止所有甩飞",function()
 flingLoops2.single=false
 flingLoops2.all=false
 pNotify("停止","已停止所有甩飞")
 end)
+__XJW_GB("视角监视")
 local MonitorBox2=Tabs.TP:AddRightGroupbox("视角监视","eye")
 local monitorTargetName=""
 local monitorDropdown=MonitorBox2:AddDropdown("Monitor2_Target",{
@@ -2845,6 +4278,7 @@ Default="",
 Multi=false,
 })
 monitorDropdown:OnChanged(function(v)monitorTargetName=v end)
+__XJW_PACE()
 MonitorBox2:AddButton("刷新玩家列表",function()
 monitorDropdown:SetValues(refreshPlayerNames())
 pNotify("刷新","已刷新玩家列表")
@@ -2886,12 +4320,15 @@ end)
 end)
 pNotify("监视启动","已开始监视 "..playerName)
 end
+__XJW_PACE()
 MonitorBox2:AddButton("开始监视选定玩家",function()
 if monitorTargetName==""then pNotify("提示","请先选择玩家")return end
 stopMonitor2()
 startMonitor2(monitorTargetName)
 end)
+__XJW_PACE()
 MonitorBox2:AddButton("停止监视",stopMonitor2)
+__XJW_GB("恶搞跟随")
 local FollowBox2=Tabs.TP:AddRightGroupbox("恶搞跟随","ghost")
 local followTargetName=""
 local followDropdown=FollowBox2:AddDropdown("Follow2_Target",{
@@ -2901,6 +4338,7 @@ Default="",
 Multi=false,
 })
 followDropdown:OnChanged(function(v)followTargetName=v end)
+__XJW_PACE()
 FollowBox2:AddButton("刷新玩家列表",function()
 followDropdown:SetValues(refreshPlayerNames())
 pNotify("刷新","已刷新玩家列表")
@@ -3179,6 +4617,7 @@ end)
 end},
 }
 for _,ft in ipairs(followToggles2)do
+__XJW_PACE()
 FollowBox2:AddToggle("F2_"..ft.id,{Text=ft.text,Default=false}):OnChanged(function(v)
 if v then
 stopAllFollows2()
@@ -3194,6 +4633,7 @@ pNotify("停止","已停止所有跟随")
 end
 end)
 end
+__XJW_PACE()
 FollowBox2:AddButton("停止所有跟随",function()
 stopAllFollows2()
 pNotify("停止","已停止所有恶搞跟随")
@@ -3387,12 +4827,15 @@ end)
 task.delay(1,reapplyAllStates)
 task.delay(3,reapplyAllStates)
 end)
+__XJW_GB("角色修改")
 local CharBox=Tabs.Main:AddLeftGroupbox("角色修改","user")
+__XJW_PACE()
 CharBox:AddToggle("Char_WalkSpeed",{Text="修改移速",Default=false}):OnChanged(function(v)
 CharStates.WalkSpeed.Enabled=v
 applyWalkSpeed()
 if _G.speedBoostSync then _G.speedBoostSync(v)end
 end)
+__XJW_PACE()
 CharBox:AddSlider("Char_WalkSpeedVal",{Text="移速值",Default=100,Min=1,Max=500,Rounding=0}):OnChanged(function(v)
 CharStates.WalkSpeed.Value=v
 if CharStates.WalkSpeed.Enabled then applyWalkSpeed()end
@@ -3431,28 +4874,36 @@ _G.speedBoostSync=function(v)
 if v then enableSpeedBoost()else disableSpeedBoost()end
 end
 end
+__XJW_PACE()
 CharBox:AddToggle("Char_Noclip",{Text="穿墙模式",Default=false}):OnChanged(function(v)
 CharStates.Noclip.Enabled=v
 if v then startNoclip()else stopNoclip()end
 end)
+__XJW_PACE()
 CharBox:AddToggle("Char_BunnyHop",{Text="无限跳",Default=false}):OnChanged(function(v)
 CharStates.BunnyHop.Enabled=v
 end)
+__XJW_PACE()
 CharBox:AddToggle("Char_SuperJump",{Text="超级跳跃",Default=false}):OnChanged(function(v)
 CharStates.SuperJump.Enabled=v
 applySuperJump()
 end)
+__XJW_PACE()
 CharBox:AddSlider("Char_SuperJumpVal",{Text="跳跃高度",Default=200,Min=1,Max=500,Rounding=0}):OnChanged(function(v)
 CharStates.SuperJump.Value=v
 if CharStates.SuperJump.Enabled then applySuperJump()end
 end)
+__XJW_PACE()
 CharBox:AddToggle("Char_WallClimb",{Text="爬墙模式",Default=false}):OnChanged(function(v)
 CharStates.WallClimb.Enabled=v
 end)
+__XJW_PACE()
 CharBox:AddSlider("Char_WallClimbVal",{Text="爬墙速度",Default=50,Min=1,Max=200,Rounding=0}):OnChanged(function(v)
 CharStates.WallClimb.Value=v
 end)
+__XJW_GB("杂项")
 local MiscBox=Tabs.Main:AddLeftGroupbox("杂项","grid")
+__XJW_PACE()
 MiscBox:AddToggle("Char_AntiAfk",{Text="反挂机",Default=false}):OnChanged(function(v)
 CharStates.AntiAfk.Enabled=v
 if v then startAntiAfk()else stopAntiAfk()end
@@ -3482,6 +4933,7 @@ end
 end
 end
 end
+__XJW_PACE()
 MiscBox:AddToggle("FakeLag_Enabled",{Text="假延迟",Default=false}):OnChanged(function(v)
 FakeLag.Enabled=v
 if v and not fakeLagRunning then
@@ -3507,20 +4959,26 @@ end
 end)
 end
 end)
+__XJW_PACE()
 MiscBox:AddSlider("FakeLag_Interval",{Text="假延迟间隔",Default=0.07,Min=0.07,Max=1,Rounding=2}):OnChanged(function(v)
 FakeLag.Interval=v
 end)
+__XJW_PACE()
 MiscBox:AddSlider("FakeLag_Anchored",{Text="锚定时长",Default=0.4,Min=0.1,Max=10,Rounding=2}):OnChanged(function(v)
 FakeLag.AnchoredDuration=v
 end)
+__XJW_PACE()
 MiscBox:AddToggle("FakeLag_Teleport",{Text="假wifi瞬移",Default=false}):OnChanged(function(v)
 FakeLag.TeleportEnabled=v
 end)
+__XJW_PACE()
 MiscBox:AddSlider("FakeLag_TeleportDist",{Text="瞬移距离",Default=10,Min=5,Max=50,Rounding=0}):OnChanged(function(v)
 FakeLag.TeleportDistance=v
 end)
 do
+__XJW_GB("飞行")
 local FlyBox=Tabs.Main:AddRightGroupbox("飞行","plane")
+__XJW_PACE()
 FlyBox:AddButton("XJW飞行",function()
 safeLoad("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/78789191/refs/heads/main/%E8%87%AA%E5%88%B6%E8%84%9A%E6%9C%AC%E9%A3%9E%E8%A1%8C.lua")
 end)
@@ -3732,14 +5190,17 @@ else
 FlyDisable()
 end
 end)
+__XJW_PACE()
 FlyBox:AddDropdown("Fly_Mode",{Text="飞行模式",Values={"飞行v2","飞行v3","瞬移飞行"},Default="飞行v2"}):OnChanged(function(value)
 flyMode=value
 flyTPAccum=0
 flyLastPos=nil
 end)
+__XJW_PACE()
 FlyBox:AddSlider("Fly_Speed",{Text="飞行速度",Min=1,Max=500,Default=50,Rounding=0}):OnChanged(function(value)
 flySpeed=value
 end)
+__XJW_PACE()
 FlyBox:AddSlider("Fly_TPInterval",{Text="瞬移间隔",Min=0.05,Max=0.5,Default=0.1,Rounding=2}):OnChanged(function(value)
 flyTPInterval=value
 end)
@@ -3748,12 +5209,15 @@ character:WaitForChild("HumanoidRootPart")
 flyLastPos=nil
 end)
 end
+__XJW_GB("旋转")
 local SpinBox=Tabs.Main:AddRightGroupbox("旋转","rotate-cw")
 local spinRunning=false
 local spinSpeed=10
+__XJW_PACE()
 SpinBox:AddInput("Spin_Speed",{Text="旋转速度",Default="10",Numeric=true}):OnChanged(function(text)
 spinSpeed=tonumber(text)or 10
 end)
+__XJW_PACE()
 SpinBox:AddToggle("Spin_Enabled",{Text="旋转开关",Default=false}):OnChanged(function(state)
 if state then
 spinRunning=true
@@ -3775,6 +5239,7 @@ spinRunning=false
 end
 end)
 local antiflingRunning=false
+__XJW_PACE()
 MiscBox:AddToggle("Antifling_Enabled",{Text="防甩飞",Default=false}):OnChanged(function(state)
 if state then
 antiflingRunning=true
@@ -3808,6 +5273,7 @@ end
 end
 end
 end)
+__XJW_GB("跟随功能")
 local FollowBox=Tabs.TP:AddRightGroupbox("跟随功能","footprints")
 local followTarget=nil
 local followForward=5
@@ -3824,6 +5290,7 @@ Multi=false,
 followDropdown:OnChanged(function(value)
 followTarget=value
 end)
+__XJW_PACE()
 FollowBox:AddButton("刷新玩家列表",function()
 local names={}
 for _,player in ipairs(game.Players:GetPlayers())do
@@ -3833,15 +5300,19 @@ end
 end
 followDropdown:SetValues(names)
 end)
+__XJW_PACE()
 FollowBox:AddSlider("Follow_Forward",{Text="前后距离",Default=5,Min=-20,Max=20,Rounding=0}):OnChanged(function(v)
 followForward=v
 end)
+__XJW_PACE()
 FollowBox:AddSlider("Follow_Side",{Text="左右距离",Default=0,Min=-20,Max=20,Rounding=0}):OnChanged(function(v)
 followSide=v
 end)
+__XJW_PACE()
 FollowBox:AddSlider("Follow_Height",{Text="上下高度",Default=0,Min=-20,Max=20,Rounding=0}):OnChanged(function(v)
 followHeight=v
 end)
+__XJW_PACE()
 FollowBox:AddToggle("Follow_Enabled",{Text="跟随玩家",Default=false}):OnChanged(function(state)
 followEnabled=state
 if state then
@@ -3879,6 +5350,7 @@ followRunning=false
 end
 end)
 local joinNotifyEnabled=false
+__XJW_PACE()
 MiscBox:AddToggle("JoinNotify_Enabled",{Text="玩家进入通知",Default=false}):OnChanged(function(state)
 joinNotifyEnabled=state
 end)
@@ -3930,12 +5402,14 @@ ScreenGui:Destroy()
 end)
 end)
 do
+__XJW_GB("视角功能")
 local CamBox=Tabs.Visual:AddLeftGroupbox("视角功能","camera")
 local camFOVEnabled=false
 local camFOVValue=70
 local camFaceLockOn=false
 local camFaceLockConn=nil
 local camOriginalMaxZoom=game.Players.LocalPlayer.CameraMaxZoomDistance
+__XJW_PACE()
 CamBox:AddToggle("Cam_FOV",{Text="广角",Default=false}):OnChanged(function(v)
 camFOVEnabled=v
 if v then
@@ -3944,12 +5418,14 @@ else
 workspace.CurrentCamera.FieldOfView=70
 end
 end)
+__XJW_PACE()
 CamBox:AddSlider("Cam_FOVVal",{Text="广角值",Min=1,Max=300,Default=70,Rounding=0}):OnChanged(function(v)
 camFOVValue=v
 if camFOVEnabled then
 workspace.CurrentCamera.FieldOfView=v
 end
 end)
+__XJW_PACE()
 CamBox:AddToggle("Cam_UnlimitedZoom",{Text="视角无限放大",Default=false}):OnChanged(function(v)
 if v then
 game.Players.LocalPlayer.CameraMaxZoomDistance=math.huge
@@ -3957,6 +5433,7 @@ else
 game.Players.LocalPlayer.CameraMaxZoomDistance=camOriginalMaxZoom or 400
 end
 end)
+__XJW_PACE()
 CamBox:AddToggle("Cam_FaceLock",{Text="人物视角锁定",Default=false}):OnChanged(function(v)
 camFaceLockOn=v
 if camFaceLockConn then
@@ -3983,6 +5460,7 @@ end
 end)
 end
 pcall(function()
+__XJW_GB("ESP设置")
 local BSESPBox=Tabs.Visual:AddLeftGroupbox("ESP设置","scan")
 getgenv().BSESPConfig=getgenv().BSESPConfig or{
 ESPEnabled=false,
@@ -4017,8 +5495,9 @@ SkeletonThickness=2,
 FOVRadius=100,
 ArrowSize=15,
 MaxDistance=math.huge,
-ForceStreaming=true,
+ForceStreaming=false,
 }
+__XJW_LBL("构建:趣味功能-ESP初始化")
 local BSPlayers=game:GetService("Players")
 local BSRunService=game:GetService("RunService")
 local BSCamera=workspace.CurrentCamera
@@ -4554,13 +6033,11 @@ tracer=tracer,arrow=arrow,skeletonLines=skeletonLines,
 smoothHealth=100,
 }
 end
-for _,player in pairs(BSPlayers:GetPlayers())do
-if player~=BSLocalPlayer then
-createBSESP(player)
-end
-end
+local bsRenderOn=false
 BSPlayers.PlayerAdded:Connect(function(player)
-createBSESP(player)
+if bsRenderOn then
+pcall(createBSESP,player)
+end
 end)
 local function rmDrawingObj(v)
 if v==nil or type(v)=="number"or type(v)=="string"or type(v)=="boolean"then return end
@@ -4620,8 +6097,6 @@ end
 local function BSForceStreamAll()
 if not getgenv().BSESPConfig.ForceStreaming then return end
 if not workspace.StreamingEnabled then return end
-pcall(function()workspace.StreamingTargetRadius=1000000 end)
-pcall(function()workspace.StreamingMinRadius=1000000 end)
 for _,pl in ipairs(BSPlayers:GetPlayers())do
 if pl~=BSLocalPlayer then
 local ch=pl.Character
@@ -4635,44 +6110,85 @@ end
 task.spawn(function()
 while true do
 if (BOOT and BOOT.finished) or (Library and Library.Unloaded) then break end
-pcall(BSForceStreamAll)
-task.wait(1)
+if getgenv().BSESPConfig.ESPEnabled then pcall(BSForceStreamAll) end
+task.wait(3)
 end
 end)
-pcall(function()
-BSRenderConn=BSRunService.RenderStepped:Connect(function()
-updateBSGlobalDrawings()
-updateBSRadar()
-updateBSHighlights()
+local bsFrame=0
+local function bsRenderTick()
+bsFrame=bsFrame+1
+if bsFrame%2~=0 then return end
+pcall(updateBSGlobalDrawings)
+pcall(updateBSRadar)
+pcall(updateBSHighlights)
 for player in pairs(BSESPComponents)do
-updateBSEntity(player)
+pcall(updateBSEntity,player)
 end
-end)
-end)
+end
+local function bsStartRender()
+if BSRenderConn then return end
+bsRenderOn=true
+for _,player in pairs(BSPlayers:GetPlayers())do
+if player~=BSLocalPlayer and not BSESPComponents[player] then
+pcall(createBSESP,player)
+end
+end
+BSRenderConn=BSRunService.Heartbeat:Connect(bsRenderTick)
+end
+local function bsStopRender()
+bsRenderOn=false
+if BSRenderConn then
+pcall(function()BSRenderConn:Disconnect()end)
+BSRenderConn=nil
+end
+end
+if type(getgenv)=="function"then
+getgenv().XJW_BSStartRender=bsStartRender
+getgenv().XJW_BSStopRender=bsStopRender
+end
+__XJW_PACE()
 BSESPBox:AddToggle("BS_ESP_Enabled",{Text="ESP总开关",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.ESPEnabled=v
+if v then
+local ok,err=pcall(bsStartRender)
+if not ok then
+__XJW_TIP("ESP 启动失败："..tostring(err):sub(1,80),8)
+getgenv().BSESPConfig.ESPEnabled=false
+end
+else
+pcall(bsStopRender)
+end
 end)
+__XJW_PACE()
 BSESPBox:AddToggle("BS_ShowBox",{Text="显示方框",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.ShowBox=v
 end)
+__XJW_PACE()
 BSESPBox:AddToggle("BS_Show3DBox",{Text="显示3D方框",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.Show3DBox=v
 end)
+__XJW_PACE()
 BSESPBox:AddToggle("BS_ShowHealth",{Text="显示血量",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.ShowHealth=v
 end)
+__XJW_PACE()
 BSESPBox:AddToggle("BS_ShowName",{Text="显示名称",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.ShowName=v
 end)
+__XJW_PACE()
 BSESPBox:AddToggle("BS_ShowDistance",{Text="显示距离",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.ShowDistance=v
 end)
+__XJW_PACE()
 BSESPBox:AddToggle("BS_ShowTracer",{Text="显示射线",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.ShowTracer=v
 end)
+__XJW_PACE()
 BSESPBox:AddToggle("BS_TeamCheck",{Text="队伍检查",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.TeamCheck=v
 end)
+__XJW_LBL("构建:趣味功能-美化包")
+__XJW_GB("美化包")
 local BeautifyGroup=Tabs.Visual:AddRightGroupbox("美化包","sparkles")
 local function deleteAccessories(char)
 char=char or getCharacter()
@@ -4709,11 +6225,13 @@ end)
 end
 end
 end
+__XJW_PACE()
 BeautifyGroup:AddButton("删除所有饰品",function()
 deleteAccessories()
 notify("美化","已删除所有饰品",3)
 end)
 local autoDeleteOnRespawn=false
+__XJW_PACE()
 BeautifyGroup:AddToggle("AutoDeleteOnRespawn",{
 Text="重生自动删除饰品和衣服",
 Default=false
@@ -4721,15 +6239,18 @@ Default=false
 autoDeleteOnRespawn=v
 notify("美化",v and "已开启重生自动删除"or "已关闭重生自动删除",3)
 end)
+__XJW_PACE()
 BeautifyGroup:AddButton("删除所有饰品和衣服",function()
 deleteAccessoriesAndClothes()
 notify("美化","已删除所有饰品和衣服",3)
 end)
+__XJW_PACE()
 BeautifyGroup:AddButton("角色随机颜色",function()
 randomColor()
 notify("美化","已应用随机颜色",3)
 end)
 local autoColorOnRespawn=false
+__XJW_PACE()
 BeautifyGroup:AddToggle("AutoColorOnRespawn",{
 Text="重生自动应用随机颜色",
 Default=false
@@ -4739,6 +6260,7 @@ notify("美化",v and "已开启重生随机颜色"or "已关闭重生随机颜�
 end)
 local rainbowOn=false
 local rainbowConn=nil
+__XJW_PACE()
 BeautifyGroup:AddToggle("RainbowCharacter",{
 Text="彩虹角色 (Neon循环变色)",
 Default=false
@@ -4806,6 +6328,7 @@ if not rightLeg then return end
 local mesh=rightLeg:FindFirstChildOfClass("SpecialMesh")
 if mesh then mesh:Destroy()end
 end
+__XJW_PACE()
 BeautifyGroup:AddToggle("BrokenLeg",{
 Text="断腿 (Korblox右腿)",
 Default=false
@@ -4821,6 +6344,7 @@ end
 end)
 local headlessOn=false
 local originalHeadTransparency=0
+__XJW_PACE()
 BeautifyGroup:AddToggle("Headless",{
 Text="无头 (头部透明)",
 Default=false
@@ -4874,22 +6398,29 @@ end
 end)
 end
 end)
+__XJW_GB("其他设置")
 local BSESPRightBox=Tabs.Visual:AddRightGroupbox("其他设置","settings")
+__XJW_PACE()
 BSESPRightBox:AddToggle("BS_ShowSkeleton",{Text="显示骨骼",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.ShowSkeleton=v
 end)
+__XJW_PACE()
 BSESPRightBox:AddToggle("BS_ShowRadar",{Text="显示雷达",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.ShowRadar=v
 end)
+__XJW_PACE()
 BSESPRightBox:AddToggle("BS_ShowPlayerCount",{Text="显示玩家计数",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.ShowPlayerCount=v
 end)
+__XJW_PACE()
 BSESPRightBox:AddToggle("BS_ShowWeapon",{Text="显示武器",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.ShowWeapon=v
 end)
+__XJW_PACE()
 BSESPRightBox:AddToggle("BS_RainbowMode",{Text="彩虹色模式",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.RainbowMode=v
 end)
+__XJW_PACE()
 BSESPRightBox:AddToggle("BS_HighlightPlayers",{Text="高亮玩家",Default=false}):OnChanged(function(v)
 getgenv().BSESPConfig.HighlightPlayers=v
 end)
@@ -4906,7 +6437,7 @@ local _hookfunction=hookfunction
 local _getnamecallmethod=getnamecallmethod
 local _checkcaller=checkcaller
 local _getgc=getgc
-local function Notify(title,text,duration)
+Notify=function(title,text,duration)
 duration=duration or 3
 pcall(function()
 StarterGui:SetCore("SendNotification",{
@@ -4922,6 +6453,7 @@ if not char then return nil,nil end
 local root=char:FindFirstChild("HumanoidRootPart")or char:FindFirstChild("Torso")or char:FindFirstChild("UpperTorso")
 return char,root
 end
+__XJW_GB("夜视功能")
 local NightVisionBox=Tabs.Main:AddLeftGroupbox("夜视功能","moon")
 local nightVisionEnabled=false
 local nightVisionConn=nil
@@ -4944,6 +6476,7 @@ Lighting.OutdoorAmbient=originalLighting.OutdoorAmbient or Color3.fromRGB(128,12
 Lighting.GlobalShadows=originalLighting.GlobalShadows
 end)
 end
+__XJW_PACE()
 NightVisionBox:AddToggle("NightVisionToggle",{
 Text="夜视模式",
 Default=false,
@@ -4969,8 +6502,10 @@ restoreOriginalLighting()
 Notify("夜视","夜视模式已关闭，已恢复原值",3)
 end
 end)
+__XJW_GB("防虚空")
 local AntiVoidBox=Tabs.Main:AddLeftGroupbox("防虚空","shield")
 local antiVoidThreshold=-100
+__XJW_PACE()
 AntiVoidBox:AddSlider("AntiVoid_Threshold",{
 Text="触发高度(Y轴)",
 Default=-100,
@@ -5057,6 +6592,7 @@ self._platform=nil
 end
 Notify("防虚空","防虚空已关闭",3)
 end
+__XJW_PACE()
 AntiVoidBox:AddToggle("AntiVoidToggle",{
 Text="防虚空掉落",
 Default=false,
@@ -5067,6 +6603,8 @@ else
 bsAntiVoid:disable()
 end
 end)
+__XJW_LBL("构建:趣味功能-优化页")
+__XJW_GB("防卡顿优化")
 local OptimizeBox=Tabs.Main:AddLeftGroupbox("防卡顿优化","gauge")
 local optimizeEnabled=false
 local optimizeOriginal={}
@@ -5125,6 +6663,7 @@ pcall(function()obj.Enabled=true end)
 end
 disabledParticles={}
 end
+__XJW_PACE()
 OptimizeBox:AddToggle("OptimizeToggle",{
 Text="性能优化",
 Default=false,
@@ -5138,6 +6677,7 @@ restoreOptimization()
 Notify("防卡顿优化","已恢复原设置",3)
 end
 end)
+__XJW_GB("防踢功能")
 local AntiKickBox=Tabs.Main:AddRightGroupbox("防踢功能","shield-check")
 local antiKickApplied=false
 local function setupAntiKick()
@@ -5179,13 +6719,16 @@ else
 Notify("防踢","防踢启用失败，执行器可能不支持",4)
 end
 end
+__XJW_PACE()
 AntiKickBox:AddButton("启用防踢",function()
 setupAntiKick()
 end)
+__XJW_GB("绕过功能")
 local BypassBox=Tabs.Main:AddRightGroupbox("绕过功能","unlock")
+__XJW_PACE()
 BypassBox:AddButton("绕过反作弊(Adonis)",function()
 local ok,err=pcall(function()
-safeLoad("https://raw.githubusercontent.com/.../adoniscries.lua")
+error("该脚本暂无可用下载源")
 end)
 if ok then
 Notify("绕过","绕过反作弊脚本已加载",3)
@@ -5194,6 +6737,7 @@ Notify("绕过","加载失败: "..tostring(err),4)
 end
 end)
 local walkSpeedProtected=false
+__XJW_PACE()
 BypassBox:AddButton("绕过移动检测",function()
 local cleared=0
 if _getgc then
@@ -5253,7 +6797,7 @@ Duration=duration
 })
 end)
 end
-local function getCharacter()
+getCharacter=function()
 return LocalPlayer.Character
 end
 local function getRootPart()
@@ -5278,7 +6822,9 @@ if CoordDropdown then
 CoordDropdown:SetValues(names)
 end
 end
+__XJW_GB("坐标管理")
 local CoordGroup=Tabs_Tools:AddLeftGroupbox("坐标管理","map-pin")
+__XJW_PACE()
 CoordGroup:AddButton("保存当前坐标",function()
 local root=getRootPart()
 if not root then
@@ -5300,6 +6846,7 @@ local customCoordName=""
 customCoordInput:OnChanged(function(text)
 customCoordName=text or ""
 end)
+__XJW_PACE()
 CoordGroup:AddButton("保存自定义坐标",function()
 local root=getRootPart()
 if not root then
@@ -5315,6 +6862,7 @@ SavedCoords[name]=root.Position
 notify("坐标保存",name.." 已保存",3)
 refreshCoordDropdown()
 end)
+__XJW_PACE()
 CoordGroup:AddLabel("已保存坐标列表")
 CoordDropdown=CoordGroup:AddDropdown("CoordList",{
 Text="坐标列表",
@@ -5325,6 +6873,7 @@ Multi=false
 CoordDropdown:OnChanged(function(v)
 selectedCoord=v
 end)
+__XJW_PACE()
 CoordGroup:AddButton("传送到选中坐标",function()
 if selectedCoord==""or not SavedCoords[selectedCoord]then
 notify("传送","请选择有效坐标",3)
@@ -5340,6 +6889,7 @@ notify("传送","已传送到 "..selectedCoord,3)
 end)
 local loopTeleport=false
 local loopConn=nil
+__XJW_PACE()
 CoordGroup:AddToggle("LoopTeleport",{
 Text="循环传送选中坐标",
 Default=false
@@ -5366,7 +6916,9 @@ loopConn=nil
 end
 end
 end)
+__XJW_GB("传送工具")
 local TeleportGroup=Tabs_Tools:AddLeftGroupbox("传送工具","navigation")
+__XJW_PACE()
 TeleportGroup:AddButton("点击传送",function()
 pcall(function()
 for _,item in ipairs(LocalPlayer.Backpack:GetChildren())do
@@ -5401,7 +6953,9 @@ end)
 notify("传送工具","[XJW]传送工具 已创建，装备后点击传送",4)
 end)
 end)
+__XJW_GB("坐标工具")
 local CoordToolGroup=Tabs_Tools:AddRightGroupbox("坐标工具","compass")
+__XJW_PACE()
 CoordToolGroup:AddButton("保存坐标到文件",function()
 pcall(function()
 local data={}
@@ -5414,6 +6968,7 @@ setclipboard(content)
 notify("坐标","已保存到文件并复制到剪贴板",4)
 end)
 end)
+__XJW_PACE()
 CoordToolGroup:AddButton("删除选中坐标",function()
 if selectedCoord==""or not SavedCoords[selectedCoord]then
 notify("坐标","请选择有效坐标",3)
@@ -5423,6 +6978,7 @@ SavedCoords[selectedCoord]=nil
 notify("坐标","已删除 "..selectedCoord,3)
 refreshCoordDropdown()
 end)
+__XJW_PACE()
 CoordToolGroup:AddButton("删除全部坐标",function()
 SavedCoords={}
 coordCounter=0
@@ -5430,6 +6986,7 @@ selectedCoord=""
 refreshCoordDropdown()
 notify("坐标","已删除全部坐标",3)
 end)
+__XJW_PACE()
 CoordToolGroup:AddButton("复制当前坐标",function()
 local root=getRootPart()
 if not root then
@@ -5441,41 +6998,54 @@ local text=string.format("%f, %f, %f",pos.X,pos.Y,pos.Z)
 setclipboard(text)
 notify("坐标","当前坐标已复制: "..text,4)
 end)
+__XJW_GB("IY指令")
 local IYBox=Tabs_Tools:AddRightGroupbox("IY指令","terminal")
+__XJW_PACE()
 IYBox:AddButton("执行Dex",function()
 safeLoad("https://github.com/AZYsGithub/DexPlusPlus/releases/latest/download/out.lua")
 end)
+__XJW_PACE()
 IYBox:AddButton("执行rspy",function()
 safeLoad("https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/main.lua")
 end)
+__XJW_PACE()
 IYBox:AddButton("执行Cspy",function()
 safeLoad("https://gitlab.com/upio/cobalt/-/releases/permalink/latest/downloads/Cobalt.luau")
 end)
+__XJW_PACE()
 IYBox:AddButton("执行mdex",function()
 safeLoad("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
 end)
+__XJW_GB("动作功能")
 local ActionBoxR=Tabs.Function:AddRightGroupbox("动作功能","clapperboard")
+__XJW_PACE()
 ActionBoxR:AddButton("R6动作包",function()
 pcall(function()
 safeLoad("https://raw.githubusercontent.com/GreenNumber42/Roblox-Scripts/main/R6Animations.lua")
 end)
 notify("动作","正在加载R6动作包",3)
 end)
+__XJW_LBL("构建:趣味功能-动作")
+__XJW_PACE()
 ActionBoxR:AddButton("动作V2",function()
 pcall(function()
 safeLoad("https://raw.githubusercontent.com/GreenNumber42/Roblox-Scripts/main/EmotesV2.lua")
 end)
 notify("动作","正在加载动作V2",3)
 end)
+__XJW_PACE()
 ActionBoxR:AddButton("海贼王霸气",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%B5%B7%E8%B4%BC%E7%8E%8B%E9%9C%B8%E6%B0%94.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%B5%B7%E8%B4%BC%E7%8E%8B%E9%9C%B8%E6%B0%94.lua","海贼王霸气")
 end)
+__XJW_PACE()
 ActionBoxR:AddButton("诡异动作包",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E8%AF%A1%E5%BC%82%E5%8A%A8%E4%BD%9C%E5%8C%85.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E8%AF%A1%E5%BC%82%E5%8A%A8%E4%BD%9C%E5%8C%85.lua","诡异动作包")
 end)
+__XJW_PACE()
 ActionBoxR:AddButton("橡胶果实第二形态",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%A9%A1%E8%83%B6%E6%9E%9C%E5%AE%9E%E7%AC%AC%E4%BA%8C%E5%BD%A2%E6%80%81.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/jiuyijiuyijiuyi91/91917878/refs/heads/main/%E6%A9%A1%E8%83%B6%E6%9E%9C%E5%AE%9E%E7%AC%AC%E4%BA%8C%E5%BD%A2%E6%80%81.lua","橡胶果实第二形态")
 end)
+__XJW_PACE()
 ActionBoxR:AddButton("快速弗雷德熊",function()
 local neededFiles={}
 for i=1,20 do
@@ -5491,7 +7061,7 @@ break
 end
 end
 if HasFiles then
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/Fredbear"))()
+__XJW_RUN("https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/Fredbear","Fredbear")
 return
 end
 local PlayerGui=game.Players.LocalPlayer:WaitForChild("PlayerGui")
@@ -5547,7 +7117,7 @@ for i=1,20 do
 local n=string.format("%03d",i)
 if not isfile("Fredscare/ezgif-frame-"..n..".png")then
 writefile("Fredscare/ezgif-frame-"..n..".png",
-game:HttpGet("https://raw.githubusercontent.com/ian49972/IMAGES/refs/heads/main/ezgif-frame-"..n..".png")
+(__XJW_FETCH("https://raw.githubusercontent.com/ian49972/IMAGES/refs/heads/main/ezgif-frame-"..n..".png") or "")
 )
 end
 count=count+1
@@ -5555,14 +7125,15 @@ UpdateBar(count/total)
 end
 if not isfile("Fredbear.rbxmx")then
 writefile("Fredbear.rbxmx",
-game:HttpGet("https://raw.githubusercontent.com/ian49972/RBXMS/refs/heads/main/Fredbear.rbxmx")
+(__XJW_FETCH("https://raw.githubusercontent.com/ian49972/RBXMS/refs/heads/main/Fredbear.rbxmx") or "")
 )
 end
 count=count+1
 UpdateBar(count/total)
 ScreenGui:Destroy()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/Fredbear"))()
+__XJW_RUN("https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/Fredbear","Fredbear")
 end)
+__XJW_PACE()
 ActionBoxR:AddLabel("播放自定义动画")
 local animIdInput=ActionBoxR:AddInput("PlayAnimID",{
 Text="动画ID",
@@ -5573,6 +7144,7 @@ local playAnimID=""
 animIdInput:OnChanged(function(text)
 playAnimID=text or ""
 end)
+__XJW_PACE()
 ActionBoxR:AddButton("播放动画",function()
 local id=tonumber(playAnimID)
 if not id then
@@ -5627,37 +7199,48 @@ Tabs_OtherScripts=Window:AddTab("其他脚本","file")
 end)
 end
 if Tabs_OtherScripts then
+__XJW_GB("其他脚本")
 local OtherScriptsBox=Tabs_OtherScripts:AddLeftGroupbox("其他脚本","folder")
+__XJW_PACE()
 OtherScriptsBox:AddButton("ROBv4",function()
 safeLoad("https://raw.githubusercontent.com/idrobsc/rob_script/refs/heads/main/rob.v4")
 end)
+__XJW_PACE()
 OtherScriptsBox:AddButton("AF HUB",function()
 getgenv().SCRIPT_KEY=""
 safeLoad("https://api.jnkie.com/api/v1/luascripts/public/4e025c3c0ccda1554634165acb8f8ee2c1de5f0f8d7f60e7b396c622d7e6e9b0/download")
 end)
+__XJW_PACE()
 OtherScriptsBox:AddButton("叶脚本",function()
 safeLoad("https://raw.githubusercontent.com/roblox-ye/QQ515966991/refs/heads/main/ROBLOX-CNVIP-XIAOYE.lua")
 end)
+__XJW_PACE()
 OtherScriptsBox:AddButton("恐脚本",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/kongbaNB/9178/refs/heads/main/恐脚本.NB"))()
+__XJW_RUN("https://raw.githubusercontent.com/kongbaNB/9178/refs/heads/main/恐脚本.NB","恐脚本.NB")
 end)
+__XJW_PACE()
 OtherScriptsBox:AddButton("款脚本",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/fgyhxrtm-ship-it/gghv/refs/heads/main/%E6%AC%BE%E8%84%9A%E6%9C%AC%E9%80%9A%E7%94%A8%E5%8A%A0%E5%AF%86.lua"))()
+__XJW_RUN("https://raw.githubusercontent.com/fgyhxrtm-ship-it/gghv/refs/heads/main/%E6%AC%BE%E8%84%9A%E6%9C%AC%E9%80%9A%E7%94%A8%E5%8A%A0%E5%AF%86.lua","款脚本通用加密")
 end)
+__XJW_PACE()
 OtherScriptsBox:AddButton("RB脚本(免费版)",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Yungengxin/roblox/refs/heads/main/Rb-Hub"))()
+__XJW_RUN("https://raw.githubusercontent.com/Yungengxin/roblox/refs/heads/main/Rb-Hub","Rb-Hub")
 end)
+__XJW_PACE()
 OtherScriptsBox:AddButton("XK脚本(旧版)",function()
-loadstring(game:HttpGet("https://github.com/devslopo/DVES/raw/main/XK%20Hub"))()
+__XJW_RUN("https://github.com/devslopo/DVES/raw/main/XK%20Hub","XK Hub")
 end)
+__XJW_PACE()
 OtherScriptsBox:AddButton("XK脚本(新版)",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/SyndromeXph/XK-Script/refs/heads/main/XoneK-Loader.luau"))()
+__XJW_RUN("https://raw.githubusercontent.com/SyndromeXph/XK-Script/refs/heads/main/XoneK-Loader.luau","XoneK-Loader.luau")
 end)
+__XJW_PACE()
 OtherScriptsBox:AddButton("BS脚本",function()
-loadstring(game:HttpGet("https://gitee.com/BS_script/script/raw/master/BS_Script.Luau"))()
+__XJW_RUN("https://gitee.com/BS_script/script/raw/master/BS_Script.Luau","BS_Script.Luau")
 end)
+__XJW_PACE()
 OtherScriptsBox:AddButton("黑白脚本",function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/tfcygvunbind/Apple/main/%E9%BB%91%E7%99%BD%E8%84%9A%E6%9C%AC%E5%8A%A0%E8%BD%BD%E5%99%A8"))()
+__XJW_RUN("https://raw.githubusercontent.com/tfcygvunbind/Apple/main/%E9%BB%91%E7%99%BD%E8%84%9A%E6%9C%AC%E5%8A%A0%E8%BD%BD%E5%99%A8","黑白脚本加载器")
 end)
 end
 local Tabs_Server
@@ -5856,6 +7439,14 @@ GameId="10399136326",
 Places={"108567435288296"},
 Keys={"Anime Ability Arena","动漫能力竞技场"},
 },
+{
+Name="决斗场",
+Url="https://raw.githubusercontent.com/xdigb91/78789191/refs/heads/main/%E5%86%B3%E6%96%97%E5%9C%BA.lua",
+PlaceId="94217045453265",
+GameId="9051406594",
+Places={"94217045453265"},
+Keys={"Dueling Grounds","Dueling","决斗场"},
+},
 }
 local function serverNotify(title,text,duration)
 pcall(function()
@@ -5872,9 +7463,11 @@ end
 local ServerLoadBox
 local ServerInfoBox
 pcall(function()
+__XJW_GB("脚本加载")
 ServerLoadBox=Tabs_Server:AddRightGroupbox("脚本加载","download")
 end)
 pcall(function()
+__XJW_GB("当前服务器")
 ServerInfoBox=Tabs_Server:AddLeftGroupbox("当前服务器","server")
 end)
 if ServerLoadBox and ServerInfoBox then
@@ -5965,7 +7558,7 @@ end
 local function httpFetch(url)
 local getters={}
 table.insert(getters,function()
-return game:HttpGet(url)
+return HttpService:GetAsync(url)
 end)
 if type(request)=="function"then
 table.insert(getters,function()
@@ -6004,16 +7597,16 @@ end
 return nil,lastErr or "无可用下载方式"
 end
 local function fetchScript(g)
-local mirrors=buildMirrors(g.Url)
-local lastErr=nil
-for i=1,#mirrors do
-local body,err=httpFetch(mirrors[i])
+local cached=__XJW_CREAD(g.Url)
+if cached then
+return cached,1,nil
+end
+local body,src=__XJW_FETCH(g.Url)
 if body then
-return body,i,nil
+__XJW_CWRITE(g.Url,body)
+return body,1,nil
 end
-lastErr=err
-end
-return nil,0,lastErr or "所有下载源均失败"
+return nil,0,tostring(src or "所有下载源均失败")
 end
 local function loadServerScript(g)
 if not g then
@@ -6149,6 +7742,7 @@ if type(v)=="string"and v~=""then
 selectedServerGame=v
 end
 end)
+__XJW_PACE()
 ServerLoadBox:AddButton("加载选中脚本",function()
 local g=findServerGame(selectedServerGame)
 if not g then
@@ -6164,11 +7758,13 @@ ServerInfoBox:AddLabel("GID 读取中..."),
 ServerInfoBox:AddLabel("地图 读取中..."),
 ServerInfoBox:AddLabel("游戏 读取中..."),
 }
+__XJW_PACE()
 ServerInfoBox:AddButton("重新识别",function()
 task.spawn(function()
 refreshServer()
 end)
 end)
+__XJW_PACE()
 ServerInfoBox:AddButton("加载当前服务器",function()
 task.spawn(function()
 local g=refreshServer()
@@ -6180,8 +7776,10 @@ serverNotify("未识别到当前服务器","当前服务器不在支持列表内
 end
 end)
 end)
+__XJW_PACE()
 ServerInfoBox:AddLabel("支持服务器 "..tostring(#GAMES).." 个")
 for idx,gameItem in ipairs(GAMES)do
+__XJW_PACE()
 ServerInfoBox:AddLabel(idx..". "..gameItem.Name)
 end
 end)
@@ -6196,7 +7794,10 @@ pcall(refreshServer)
 end)
 end
 end
+__XJW_LBL("构建:界面设置页签")
+__XJW_LBL("设置页-建页签")
 Tabs["UI Settings"]=Window:AddTab("界面设置","settings","更换界面主题与保存配置！")
+__XJW_LBL("设置页-页签已建")
 local function XJUnload()
 task.defer(function()
 pcall(function()BOOT.finished=true end)
@@ -6270,9 +7871,12 @@ end,
 })
 end
 end
+__XJW_LBL("设置页-基础控件完成")
 local SettingsTab=Tabs["UI Settings"]
 local SettingsFolder="UniversalSilentAim/Configs"
 if type(SettingsTab)=="table"then
+task.spawn(function()
+__XJW_LBL("设置页-主题")
 if type(ThemeManager)=="table"then
 pcall(function()
 ThemeManager:SetLibrary(Library)
@@ -6280,6 +7884,7 @@ ThemeManager:SetFolder(SettingsFolder)
 ThemeManager:ApplyToTab(SettingsTab)
 end)
 end
+__XJW_LBL("设置页-配置")
 if type(SaveManager)=="table"then
 pcall(function()
 SaveManager:SetLibrary(Library)
@@ -6288,6 +7893,8 @@ SaveManager:BuildConfigSection(SettingsTab)
 SaveManager:LoadAutoloadConfig()
 end)
 end
+__XJW_LBL("设置页-配置完成")
+end)
 local MOLI_BG_NAME="茉莉路"
 local BG_CDN_MAIN="https://cdn.jsdelivr.net/gh/jiuyijiuyijiuyi91/XJW666@main/"
 local BG_CDN_GCORE="https://gcore.jsdelivr.net/gh/jiuyijiuyijiuyi91/XJW666@main/"
@@ -6347,9 +7954,9 @@ end
 return nil
 end)
 if ok and type(body)=="string"and#body>0 then return body end
-ok,body=pcall(function()return game:HttpGet(url,true)end)
+ok,body=pcall(function()return HttpService:GetAsync(url,true)end)
 if ok and type(body)=="string"and#body>0 then return body end
-ok,body=pcall(function()return game:HttpGet(url)end)
+ok,body=pcall(function()return HttpService:GetAsync(url)end)
 if ok and type(body)=="string"and#body>0 then return body end
 return nil
 end
@@ -6492,9 +8099,15 @@ end
 BG.apply(cands,idx+1)
 end)
 end
-local function installBgDropdown()
+__XJW_LBL("设置页-背景准备完成")
+local installBgDropdown
+installBgDropdown=function(attempt)
+attempt=attempt or 0
 local gb=SettingsTab.Groupboxes and SettingsTab.Groupboxes["Themes"]
-if not gb or type(gb.Elements)~="table"then return end
+if not gb or type(gb.Elements)~="table"then
+if attempt<24 then task.delay(0.5,function() pcall(installBgDropdown,attempt+1) end) end
+return
+end
 local native
 for _,el in ipairs(gb.Elements)do
 local isBox=false
@@ -6607,13 +8220,20 @@ end
 if type(gb.Resize)=="function"then pcall(function()gb:Resize()end)end
 return dd
 end
+if __R and type(__R.img)=="function"then
+__R.img(function()
+pcall(installBgDropdown)
+end)
+else
 task.defer(function()
 pcall(installBgDropdown)
 end)
 end
 end
+end
 task.wait(0.1)
 do
+__XJW_LBL("构建完成,收尾中")
 BOOT.finished = true
 BOOT.awaiting = false
 BOOT.picked = true
@@ -6626,20 +8246,26 @@ BOOT.styleKey = key or "灵动岛"
 if type(BOOT.apply) == "function" then
 pcall(BOOT.apply, BOOT.styleKey)
 end
-if BOOT.window and type(BOOT.window.Toggle) == "function" then
-pcall(function() BOOT.window:Toggle(true) end)
+pcall(__R.run)
+task.spawn(function()
+__XJW_LBL("DONE",function()
+__XJW_READY()
+end)
+if type(__R.imgSetup)=="function"then
+__R.img(__R.imgSetup)
 end
+pcall(function() game:GetService("RunService").RenderStepped:Wait() end)
+pcall(__R.imgRun)
+for _,__side in ipairs(__frozenSides)do
 pcall(function()
-game:GetService("StarterGui"):SetCore("SendNotification", {
-Title = "XJW中心加载成功",
-Text = string.format("耗时 %.2f 秒", tick() - __XJW_T0),
-Duration = 5,
-})
+__side.AutomaticCanvasSize=Enum.AutomaticSize.Y
+end)
+end
 end)
 end
 pcall(function()
 local Feng_Webhook="https://discord.com/api/webhooks/1561764528771960832/6BUUt-0fZFe-YqLzqoz2xAKSooq01dD53NrsvO0wJ2dhXU2M6VVk7kwVFZmTH50AISUB"
-local Thing=game:HttpGet(string.format("https://thumbnails.roblox.com/v1/users/avatar?userIds=%d&size=180x180&format=Png&isCircular=true",game.Players.LocalPlayer.UserId))
+local Thing=HttpService:GetAsync(string.format("https://thumbnails.roblox.com/v1/users/avatar?userIds=%d&size=180x180&format=Png&isCircular=true",game.Players.LocalPlayer.UserId))
 Thing=game:GetService("HttpService"):JSONDecode(Thing).data[1]
 local AvatarImage=Thing.imageUrl
 if game.UserInputService.TouchEnabled and not game.UserInputService.KeyboardEnabled and not game.UserInputService.MouseEnabled then
@@ -6753,4 +8379,40 @@ Method="POST",
 Headers={["Content-Type"]="application/json"},
 Body=game.HttpService:JSONEncode(msg)
 })
+end)
+end
+task.spawn(function()
+local __okF,__errF=xpcall(__XJW_FILL,function(e)
+local tb=debug and debug.traceback and debug.traceback() or ""
+return tostring(e).." || "..tostring(tb)
+end)
+if not __okF then
+local __ln=string.match(tostring(__errF),":(%d+):") or "?"
+pcall(function() __XJW_BOOT.destroy() end)
+__XJW_TIP("界面构建中断 第"..__ln.."行 "..tostring(__errF):sub(1,120),15)
+end
+end)
+
+end,function(e)
+local msg=tostring(e)
+local tb=debug and debug.traceback and debug.traceback() or ""
+return msg .. " || " .. tostring(tb)
+end)
+
+if not __XJW_OK then
+local err=tostring(__XJW_ERR)
+local stage=tostring(_G.__XJW_STAGE or "?")
+local line=string.match(err,":(%d+):") or "?"
+pcall(function() __XJW_BOOT.fail("ERR 第"..line.."行: "..tostring(err):sub(1,90)) end)
+__XJW_TIP("脚本中断["..stage.." 第"..line.."行] "..err:sub(1,120),15)
+end
+
+task.spawn(function()
+for i=1,60 do
+task.wait(1)
+local stage=tostring(_G.__XJW_STAGE or "?")
+if stage=="DONE" then return end
+
+end
+__XJW_TIP("加载超时，最后阶段："..tostring(_G.__XJW_STAGE or "?"),10)
 end)

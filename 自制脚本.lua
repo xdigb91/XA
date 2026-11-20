@@ -525,9 +525,10 @@ do
 				end
 				raiseTop()
 				PK.title.Text = ucut(tostring(text or ""), 16)
-				PK.sub.Text = (pct and pct >= 94) and "SYSTEM  READY"
+				local _t0 = _G.__XJW_T0 or __XJW_T0 or tick()
+				PK.sub.Text = string.format("T+%.1fs  ", tick() - _t0) .. ((pct and pct >= 94) and "SYSTEM  READY"
 					or (pct and pct >= 60) and "LOAD  FEATURES"
-					or "BUILD  CORE"
+					or "BUILD  CORE")
 				if pct then
 					pct = math.clamp(pct, 0, 100)
 					if pct > st.target then
@@ -819,6 +820,8 @@ local __XJW_STAGE_MAP = {
 	["下载界面库"] = 7,
 	["库已加载"] = 12,
 	["库校验通过"] = 16,
+	["库对象就绪"] = 18,
+	["建窗口中"] = 20,
 	["窗口已创建"] = 22,
 	["开始建页签"] = 26,
 	["页签已建"] = 30,
@@ -939,12 +942,14 @@ local LocalPlayer=Players.LocalPlayer
 local XJWUI_NAME="XJWUI_v1.lua"
 local XJWUI_CACHE="XJWUI_v1.lua"
 local XJWUI_MIRRORS={
+"https://raw.githubusercontent.com/jiuyijiuyijiuyi91/UIKu/main/",
 "https://cdn.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu@main/",
 "https://fastly.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu@main/",
 "https://gcore.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu@main/",
 "https://testingcf.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu@main/",
-"https://cdn.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu/",
-"https://fastly.jsdelivr.net/gh/jiuyijiuyijiuyi91/UIKu/",
+"https://cdn.statically.io/gh/jiuyijiuyijiuyi91/UIKu/main/",
+"https://ghproxy.net/https://raw.githubusercontent.com/jiuyijiuyijiuyi91/UIKu/main/",
+"https://gh-proxy.com/https://raw.githubusercontent.com/jiuyijiuyijiuyi91/UIKu/main/",
 }
 local function bootTip(text,dur)
 pcall(function()
@@ -967,6 +972,39 @@ return res
 end
 return nil
 end
+local function envTable()
+local ok,g=pcall(function() return getgenv and getgenv() end)
+if ok and type(g)=="table" then return g end
+return _G
+end
+local function timedGet(url,sec)
+local genv=envTable()
+local req=genv.request
+if type(req)~="function" and type(genv.syn)=="table" then req=genv.syn.request end
+if type(req)~="function" and type(genv.http)=="table" then req=genv.http.request end
+if type(req)=="function" then
+local ok,res=pcall(req,{Url=url,Method="GET",Timeout=sec or 8})
+if ok and type(res)=="table" and (res.StatusCode==200 or res.StatusCode==nil) and type(res.Body)=="string" and #res.Body>200 then
+return res.Body
+end
+end
+local ok,body=pcall(function() return game:HttpGet(url,true) end)
+if ok and type(body)=="string" and #body>200 then return body end
+ok,body=pcall(function()
+return game:GetService("HttpService"):GetAsync(url)
+end)
+if ok and type(body)=="string" and #body>200 then return body end
+return nil
+end
+local function dropBadCache()
+pcall(function()
+local genv=envTable()
+local d=genv.delfile
+if type(d)=="function" and type(isfile)=="function" and isfile(XJWUI_CACHE) then
+d(XJWUI_CACHE)
+end
+end)
+end
 local function loadXJWUI()
 if canRead() then
 for _,path in ipairs({XJWUI_CACHE,"UIKu/"..XJWUI_NAME}) do
@@ -978,13 +1016,16 @@ if lib then return lib end
 end
 end
 end
+dropBadCache()
 end
-for i=1,2 do
+local total=#XJWUI_MIRRORS
+local tStart=os.clock()
+for i=1,total do
+if os.clock()-tStart>40 then break end
 local root=XJWUI_MIRRORS[i]
-if root then
-__XJW_LBL("正在获取界面库 "..i.."/2")
-local ok,src=pcall(function() return HttpService:GetAsync(root .. XJWUI_NAME) end)
-if ok and type(src)=="string" and #src>200 then
+__XJW_LBL("正在获取界面库 "..i.."/"..total)
+local src=timedGet(root..XJWUI_NAME,8)
+if src then
 local lib=tryLib(src)
 if lib then
 if canWrite() then pcall(writefile,XJWUI_CACHE,src) end
@@ -992,19 +1033,34 @@ return lib
 end
 end
 end
-end
 __XJW_LBL("界面库获取失败")
 return nil
 end
+_G.__XJW_LIB_READY=false
 bootTip("正在加载界面库…(首次较慢)",5)
 __XJW_LBL("下载界面库")
+task.delay(45,function()
+if _G.__XJW_LIB_READY~=true and _G.__XJW_LIB_FAILED~=true then
+_G.__XJW_LIB_FAILED=true
+pcall(function()
+__XJW_BOOT.fail("界面库加载超时")
+end)
+bootTip("界面库加载超时，请重试",8)
+end
+end)
 local Library=loadXJWUI()
 __XJW_LBL("库已加载")
+task.wait()
 if type(Library) ~= "table" or Library.CreateWindow == nil or Library.CreateLoading == nil then
-warn("[XJW中心] XJWUI 库加载失败")
-bootTip("界面库加载失败：镜像不通或版本不匹配，请重试",8)
+_G.__XJW_LIB_FAILED=true
+pcall(function()
+__XJW_BOOT.fail("界面库加载失败：所有线路均不可用")
+end)
+bootTip("界面库加载失败，请换个网络或重开执行器重试",8)
 return
 end
+_G.__XJW_LIB_READY=true
+__XJW_LBL("库对象就绪")
 __XJW_LBL("库校验通过")
 Library.ForceCheckbox=true
 local function guardPrimaryPartCFrame()
@@ -1046,7 +1102,9 @@ end
 oldNamecall=hookmetamethod(game,"__namecall",hookFn)
 end)
 end
-guardPrimaryPartCFrame()
+if _G.__XJW_GUARD==true then
+pcall(guardPrimaryPartCFrame)
+end
 local ThemeManager=Library.ThemeManager
 local SaveManager=Library.SaveManager
 local BACKGROUND_IMAGE="https://raw.githubusercontent.com/jiuyijiuyijiuyi91/XJW666/refs/heads/main/XJW%E8%84%9A%E6%9C%AC%E5%A3%81%E7%BA%B8.png"
@@ -1146,6 +1204,8 @@ return true
 end
 local HttpService=game:GetService("HttpService")
 local _lastUpdate="2026年11月20日10时53分"
+__XJW_LBL("建窗口中")
+task.wait()
 local Window=Library:CreateWindow({
 Title="XJW中心",
 Footer="感谢支持",
@@ -1168,6 +1228,7 @@ KeyPicker=true,
 },
 })
 __XJW_LBL("窗口已创建")
+task.wait()
 BOOT.window=Window
 _G.__XJW_WIN=Window
 BOOT.showWindow=function()
@@ -8408,11 +8469,11 @@ __XJW_TIP("脚本中断["..stage.." 第"..line.."行] "..err:sub(1,120),15)
 end
 
 task.spawn(function()
-for i=1,60 do
+for i=1,180 do
 task.wait(1)
 local stage=tostring(_G.__XJW_STAGE or "?")
 if stage=="DONE" then return end
 
 end
-__XJW_TIP("加载超时，最后阶段："..tostring(_G.__XJW_STAGE or "?"),10)
+__XJW_TIP("加载超时 T+"..string.format("%.0f",tick()-(_G.__XJW_T0 or tick())).."s 最后阶段："..tostring(_G.__XJW_STAGE or "?"),10)
 end)
